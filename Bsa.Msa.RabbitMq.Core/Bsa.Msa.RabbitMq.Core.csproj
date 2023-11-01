@@ -7,12 +7,12 @@
     <Copyright>Stanislav Batyrgareev</Copyright>
     <PackageLicenseExpression>BSD-2-Clause</PackageLicenseExpression>
     <PackageProjectUrl>http://bsasearch.org/msa.html</PackageProjectUrl>
-    <RepositoryUrl>https://bitbucket.org/SBatyrgareev/bsa.msa/src</RepositoryUrl>
+    <RepositoryUrl>https://github.com/S-DyX/bsa.msa</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
     <PackageTags>MSA Rabbit MQ RabbiMQ RMQ Queue Message Bsa</PackageTags>
-    <PackageReleaseNotes>Fixed an error reading data from the queue</PackageReleaseNotes>
+    <PackageReleaseNotes>the code storage location has been changed</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>2.0.6</Version>
+    <Version>3.1.1</Version>
     <AssemblyVersion></AssemblyVersion>
     <FileVersion></FileVersion>
     <Authors>Stanislav Batyrgareev</Authors>
@@ -21,6 +21,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
-    <PackageReference Include="RabbitMQ.Client" Version="6.5.0" />
+    <PackageReference Include="RabbitMQ.Client" Version="6.6.0" />
   </ItemGroup>
 </Project>
