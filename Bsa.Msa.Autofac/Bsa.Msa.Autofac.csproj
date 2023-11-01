@@ -21,7 +21,7 @@ http://bsasearch.org/msa.html</Description>
 
   <ItemGroup>
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="6.0.0" />
-    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="2.0.6" />
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="1.0.19" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.2" />
   </ItemGroup>
 
