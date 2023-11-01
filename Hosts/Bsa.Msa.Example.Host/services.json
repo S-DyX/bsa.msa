@@ -1,0 +1,80 @@
+{
+  "services": [
+    //{
+    //  "name": "serviceUseExchange",
+    //  "commands": [
+    //    {
+    //      "name": "testCommandEx",
+    //      "type": "ExampleCommand",
+    //      "fileName": "some.txt",
+    //      "period": "00:00:01"
+    //    }//,
+    //    //{
+    //    //  "name": "ExampleException",
+    //    //  "type": "ExampleExceptionCommand",
+    //    //  "period": "02:00:25"
+    //    //}
+    //  ],
+    //  "handlers": [
+    //    //{
+    //    //  "name": "testHandlerEx",
+    //    //  "type": "ExampleMessageHandler",
+    //    //  "subscriptionEndpoint": "test.queue.linked",
+    //    //  "publicationEndpoint": "publicationEndpoint",
+    //    //  "degreeOfParallelism": 1,
+    //    //  "useExchange": true,
+    //    //  "retry": true
+    //    //},
+    //    {
+    //      "name": "ExampleMessageHandler",
+    //      "type": "ExampleMessageHandler",
+    //      "subscriptionEndpoint": "test.queue",
+    //      "publicationEndpoint": "",
+    //      "degreeOfParallelism": 20,
+    //      "useExchange": true,
+    //      "retry": true
+    //    }
+    //  ]
+
+    //},
+    {
+      "name": "serviceUseQueue",
+      "commands": [
+        {
+          "name": "testCommand",
+          "type": "ExampleCommand",
+          "publicationEndpoint": "test.queue",
+          "fileName": "some2.txt",
+          "period": "00:00:05"
+        }
+      ],
+      "handlers": [
+        {
+          "name": "testHandler",
+          "description": "if a message is sent to a queue and the queue's message handler is registered in the current process, the message will be sent to the local bus",
+          "type": "ExampleMessageHandler",
+          "subscriptionEndpoint": "test.queue",
+          "useExchange": true,
+          "publicationEndpoint": "publicationEndpoint",
+          "degreeOfParallelism": 122,
+          "ttl": 22222222,
+          "retry": true,
+          "retryCount": 2
+        },
+        {
+          "name": "testHandler2",
+          "description": "if a message is sent to a queue and the queue's message handler is registered in the current process, the message will be sent to the local bus",
+          "type": "ExampleMessageHandler2",
+          "subscriptionEndpoint": "test.queue2",
+          "useExchange": true,
+          "publicationEndpoint": "publicationEndpoint2",
+          "degreeOfParallelism": 1,
+          "ttl": 22222222,
+          "retry": true,
+          "retryCount": 2
+        }
+      ]
+
+    }
+  ]
+}

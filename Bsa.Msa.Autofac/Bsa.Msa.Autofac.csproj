@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <Platforms>AnyCPU;x64</Platforms>
+    <Description>integrating Autofac with MSA Bsa.Msa.RabbitMq.Core
+http://bsasearch.org/msa.html</Description>
+    <PackageLicenseExpression>BSD-2-Clause</PackageLicenseExpression>
+    <RepositoryType>Git</RepositoryType>
+    <Copyright>Stanislav Batyrgareev</Copyright>
+    <RepositoryUrl>https://bitbucket.org/SBatyrgareev/bsa.msa/src</RepositoryUrl>
+    <PackageProjectUrl>http://bsasearch.org/msa.html</PackageProjectUrl>
+    <PackageTags>MSA Rabbit MQ RabbiMQ RMQ Bsa.Msa.RabbitMq.Core Bsa</PackageTags>
+    <PackageReleaseNotes>Fixed an error reading data from the queue</PackageReleaseNotes>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <Version>2.0.6</Version>
+    <AssemblyVersion></AssemblyVersion>
+    <Authors>Stanislav Batyrgareev</Authors>
+    <FileVersion></FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="6.0.0" />
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="2.0.6" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.2" />
+  </ItemGroup>
+
+</Project>

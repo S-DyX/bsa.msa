@@ -1,0 +1,6 @@
+.vs/
+obj/
+bin/
+/Bsa.MsSql.Database/Bsa.MsSql.Database.jfm
+/Bsa.MsSql.Database/Bsa.Database.Sql.jfm
+/Bsa.MsSql.Database/Bsa.Database.Sql.dbmdl
