@@ -1,10 +1,12 @@
-﻿using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Threading;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+using RabbitMQ.Util;
 
 namespace Bsa.Msa.RabbitMq.Core
 {

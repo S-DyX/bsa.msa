@@ -10,9 +10,9 @@
     <RepositoryUrl>https://github.com/S-DyX/bsa.msa</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
     <PackageTags>MSA Rabbit MQ RabbiMQ RMQ Queue Message Bsa</PackageTags>
-    <PackageReleaseNotes>Fixed the problem of the RabbitMQ client when handling a large number of threads</PackageReleaseNotes>
+    <PackageReleaseNotes>Changed to EventingBasicConsumer</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>7.0.1</Version>
+    <Version>7.0.2</Version>
     <AssemblyVersion></AssemblyVersion>
     <FileVersion></FileVersion>
     <Authors>Stanislav Batyrgareev</Authors>
