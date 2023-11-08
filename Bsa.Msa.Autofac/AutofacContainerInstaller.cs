@@ -30,6 +30,10 @@ namespace Bsa.Msa.Autofac
 
 		private static void InstallHandlers(ContainerBuilder builder)
 		{
+			builder.RegisterType<SerializeService>()
+				.As<ISerializeService>()
+				.SingleInstance();
+			
 			builder.RegisterType<LocalContainer>()
 							.As<ILocalContainer>()
 							.SingleInstance();
