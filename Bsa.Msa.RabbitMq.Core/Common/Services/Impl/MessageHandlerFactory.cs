@@ -1,23 +1,24 @@
-﻿using Bsa.Msa.Common.Services.Interfaces;
+﻿using System;
+using System.Collections.Generic;
+using Bsa.Msa.Common.Services.Interfaces;
 using Bsa.Msa.Common.Services.MessageHandling;
 using Bsa.Msa.Common.Settings;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Bsa.Msa.RabbitMq.Core;
+using Bsa.Msa.RabbitMq.Core.Interfaces;
 
 namespace Bsa.Msa.Common.Services.Impl
 {
 	public sealed class MessageHandlerFactory : IMessageHandlerFactory
 	{
 		private readonly IHandlerRegistry registry;
-		private readonly ILocalContainer localContainer;
+		private readonly ILocalContainer _localContainer;
 
 		public MessageHandlerFactory(IHandlerRegistry registry, ILocalContainer localContainer)
 		{
 			this.registry = registry;
-			this.localContainer = localContainer;
+			this._localContainer = localContainer;
 		}
-		public IMessageHandler<TMessage> Create<TMessage>(string type, ISettings settings)
+		public IMessageHandler<TMessage> Create<TMessage>(string type, ISettings settings, ISimpleBus simpleBus, ILocalBus localBus)
 		{
 			var handlerType = registry.ResolveHandler(type);
 			if (handlerType == null)
@@ -33,13 +34,21 @@ namespace Bsa.Msa.Common.Services.Impl
 				var parameters = c.GetParameters();
 				foreach (var p in parameters)
 				{
-					if (p.ParameterType == typeof(ISettings))
+					if (simpleBus != null && localBus != null && p.ParameterType == typeof(ISingleRmqBus))
+					{
+							result.Add(new SingleRmqBus(new BusManager(simpleBus, localBus)));
+					}
+					else if (simpleBus != null && localBus != null && p.ParameterType == typeof(IBusManager))
+					{
+						result.Add(new BusManager(simpleBus, localBus));
+					}
+					else if (p.ParameterType == typeof(ISettings))
 					{
 						result.Add(settings);
 					}
 					else
 					{
-						var inst = localContainer.Resolve(p.ParameterType);
+						var inst = _localContainer.Resolve(p.ParameterType);
 						if (inst != null)
 						{
 							result.Add(inst);
@@ -55,7 +64,7 @@ namespace Bsa.Msa.Common.Services.Impl
 			return Activator.CreateInstance(handlerType, args) as IMessageHandler<TMessage>;
 		}
 
-		public IMessageHandler<TMessage, TResponse> Create<TMessage, TResponse>(string type, ISettings settings)
+		public IMessageHandler<TMessage, TResponse> Create<TMessage, TResponse>(string type, ISettings settings, ISimpleBus simpleBus, ILocalBus localBus)
 		{
 			throw new System.NotImplementedException();
 		}

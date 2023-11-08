@@ -40,7 +40,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			try
 			{
-				_messageHandler = _factory.Create<TMessage,TResponse>(_messageHandlerSettings.Type, _messageHandlerSettings);
+				_messageHandler = _factory.Create<TMessage,TResponse>(_messageHandlerSettings.Type, _messageHandlerSettings, null, null);
 				//_busManager.Subscribe(bus=>bus.RespondAsync<TMessage, TResponse>(
 				//	request =>
 				//		Task.Factory.StartNew(() => _messageHandler.Handle(request))));

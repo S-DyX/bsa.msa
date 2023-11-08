@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using Bsa.Msa.Common.Services.Impl;
 using Bsa.Msa.Common.Services.Interfaces;
-using Bsa.Msa.Common.Services.MessageHandling;
+using Bsa.Msa.Common.Services.MessageHandling; 
 using Bsa.Msa.RabbitMq.Core.Interfaces;
 
 namespace Bsa.Msa.RabbitMq.Core
@@ -49,7 +49,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				}
 				if (messageHandler == null)
 				{
-					messageHandler = _factory.Create<TMessage>(messageHandlerSettings.Type, messageHandlerSettings);
+					messageHandler = _factory.Create<TMessage>(messageHandlerSettings.Type, messageHandlerSettings, null, null);
 					_handlers.TryAdd(subscriptionEndpoint, messageHandler);
 				}
 				

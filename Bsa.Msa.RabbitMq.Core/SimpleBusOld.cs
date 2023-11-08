@@ -1,10 +1,4 @@
-﻿using Bsa.Msa.Common;
-using Bsa.Msa.Common.Services.MessageHandling;
-using Bsa.Msa.RabbitMq.Core.Interfaces;
-using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
-using RabbitMQ.Client.Exceptions;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +6,12 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Bsa.Msa.Common;
+using Bsa.Msa.Common.Services.MessageHandling;
+using Bsa.Msa.RabbitMq.Core.Interfaces;
+using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+using RabbitMQ.Client.Exceptions;
 
 namespace Bsa.Msa.RabbitMq.Core
 {
@@ -210,6 +210,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		private bool TryGetMessage<TMessage>(string queueName, Func<IModel> getChannel, out TMessage data)
 		{
+			ulong? deliveryTag = null;
 			data = default(TMessage);
 			var isEmpty = true;
 			var getResult = getChannel().BasicGet(queueName, false);
@@ -222,18 +223,42 @@ namespace Bsa.Msa.RabbitMq.Core
 			{
 				data = _serializeService.Deserialize<TMessage>(message);
 				isEmpty = false;
+
 			}
 			catch (Exception ex)
 			{
 				_logger?.Error(ex.Message, ex);
-				SendErrorMessage(getChannel(), queueName, array, ex);
+
+				if (ex is JsonException)
+				{
+					deliveryTag = getResult.DeliveryTag;
+					getResult = null;
+					_logger?.Error($"Error queueName={queueName}: {ex.Message}", ex);
+				}
+				else
+				{
+					SendErrorMessage(getChannel(), queueName, array, ex);
+				}
 			}
-			// ... process the message
-			getChannel().BasicAck(getResult.DeliveryTag, false);
+			finally
+			{
+				if (getResult != null)
+				{
+					// ... process the message
+					getChannel().BasicAck(getResult.DeliveryTag, false);
+				}
+				else if (deliveryTag.HasValue)
+				{
+					var channel = getChannel();
+					channel.BasicReject(deliveryTag.Value, true);
+				}
+
+			
+			}
 			return !isEmpty;
 		}
 
-		private const int _sleepTime = 200;
+		private const int _sleepTime = 500;
 		private int _iteration = 1;
 		private BasicDeliverEventArgs QueueingBasicConsumer<TMessage>(string queueName, Action<TMessage, BasicDeliverEventArgs> action, Func<IModel> getChannel, Action<Func<IModel>> configure)
 		{
@@ -262,6 +287,7 @@ namespace Bsa.Msa.RabbitMq.Core
 					if (ex is JsonException)
 					{
 						deliveryTag = e.DeliveryTag;
+						e = null;
 						e = null;
 						_logger?.Error($"Error queueName={queueName}: {ex.Message}", ex);
 					}
@@ -334,13 +360,14 @@ namespace Bsa.Msa.RabbitMq.Core
 			{
 				// ... process the message
 				if (e != null)
+				{
 					getChannel().BasicAck(e.DeliveryTag, false);
+				}
 				else if (deliveryTag.HasValue)
 				{
 					var channel = getChannel();
 					channel.BasicReject(deliveryTag.Value, true);
 				}
-
 			}
 			return e;
 		}
@@ -364,9 +391,11 @@ namespace Bsa.Msa.RabbitMq.Core
 			return e != null;
 		}
 
-		private static string GetConsumer(string queueName, Func<IModel> getChannel, Action<Func<IModel>> configure, ref QueueingBasicConsumer consumer, bool noAck)
+		private string GetConsumer(string queueName, Func<IModel> getChannel, Action<Func<IModel>> configure,
+			ref QueueingBasicConsumer consumer, bool noAck)
 		{
-			if (getChannel().IsClosed || consumer == null)
+			var channel = getChannel();
+			if (channel.IsClosed || consumer == null)
 			{
 				configure.Invoke(getChannel);
 
@@ -437,6 +466,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			_simpleConnection.Execute(getChannel =>
 			{
 				var m = _serializeService.Serialize(message);
+				_logger.Info($"Send to {queue}{Environment.NewLine}{m}");
 				var body = Encoding.UTF8.GetBytes(m);
 				var props = getChannel().CreateBasicProperties();
 				props.DeliveryMode = 2;
@@ -468,12 +498,12 @@ namespace Bsa.Msa.RabbitMq.Core
 
 			_simpleConnection.Execute(getChannel =>
 			{
-
 				var m = _serializeService.Serialize(message);
 				var body = Encoding.UTF8.GetBytes(m);
 				var props = getChannel().CreateBasicProperties();
 				props.DeliveryMode = 2;
 				getChannel().BasicPublish(exchangeName, routingKey ?? String.Empty, props, body);
+
 			});
 		}
 

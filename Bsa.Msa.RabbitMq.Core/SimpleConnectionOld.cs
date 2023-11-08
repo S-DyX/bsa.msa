@@ -27,9 +27,8 @@ namespace Bsa.Msa.RabbitMq.Core
 				{
 					try
 					{
-						ConnectionFactory.AutomaticRecoveryEnabled = false;
 						_connection = ConnectionFactory.CreateConnection();
-						
+						ConnectionFactory.AutomaticRecoveryEnabled = false;
 					}
 					catch (Exception ex)
 					{
@@ -216,7 +215,6 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		}
 
-
 		private readonly object _syncSend = new object();
 		public void Execute(Action<Func<IModel>> action)
 		{
@@ -224,7 +222,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			{
 				action.Invoke(CreateModel);
 			}
-
+			
 		}
 
 		public event Action BeforeConnect;

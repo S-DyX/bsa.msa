@@ -1,11 +1,11 @@
 ﻿//using System;
 //using System.Collections.Generic;
 //using System.Threading;
-//using Bsa.Msa.Common;
-//using Bsa.Msa.RabbitMq.Core.Interfaces;
-//using Bsa.Msa.RabbitMq.Core.Settings;
 //using RabbitMQ.Client;
 //using RabbitMQ.Client.Exceptions;
+//using Bsa.Msa.RabbitMq.Core.Common;
+//using Bsa.Msa.RabbitMq.Core.Interfaces;
+//using Bsa.Msa.RabbitMq.Core.Settings;
 
 //namespace Bsa.Msa.RabbitMq.Core
 //{
@@ -15,7 +15,7 @@
 //		private readonly ILocalLogger _logger;
 //		private ConnectionFactory _connectionFactory;
 
-//		private static object _sync = new object();
+//		private readonly object _sync = new object();
 
 //		private IConnection _connection;
 

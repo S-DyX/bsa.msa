@@ -13,13 +13,15 @@ namespace Bsa.Msa.RabbitMq.Core
 		private readonly IRabbitMqSettings _settings;
 		private readonly ILocalBus _localBus;
 		private readonly IHandlerRegistry _subscriptionRegistry;
+		private readonly ISerializeService _serializeService;
 
-		public SubscriberFactory(ILocalLogger localLogger, IRabbitMqSettings settings, ILocalBus localBus, IHandlerRegistry subscriptionRegistry)
+		public SubscriberFactory(ILocalLogger localLogger, IRabbitMqSettings settings, ILocalBus localBus, IHandlerRegistry subscriptionRegistry, ISerializeService serializeService)
 		{
 			this._localLogger = localLogger;
 			_settings = settings;
 			_localBus = localBus;
 			this._subscriptionRegistry = subscriptionRegistry;
+			_serializeService = serializeService;
 		}
 		public ISubscriber Create(string name, IMessageHandlerSettings messageHandlerSettings, IMessageHandlerFactory messageHandlerFactory)
 		{
@@ -29,8 +31,8 @@ namespace Bsa.Msa.RabbitMq.Core
 				throw new InvalidOperationException($"Handler not found {name}");
 			Type constructedClass = genericType.MakeGenericType(type);
 
-			var simpleConnection = new SimpleConnection(_settings); 
-			var simpleBus = new SimpleBus(simpleConnection);
+			var simpleConnection = new SimpleConnection(_settings, _localLogger); 
+			var simpleBus = new SimpleBus(simpleConnection, _localLogger, _serializeService);
 			return Activator.CreateInstance(constructedClass, messageHandlerSettings, messageHandlerFactory, _localLogger, simpleBus, _localBus) as ISubscriber;
 		}
 	}

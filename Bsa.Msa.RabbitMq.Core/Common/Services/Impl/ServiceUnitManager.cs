@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using Bsa.Msa.Common.Repeaters;
 using Bsa.Msa.Common.Services.Commands;
 using Bsa.Msa.Common.Services.Interfaces;
@@ -35,6 +36,18 @@ namespace Bsa.Msa.Common.Services.Impl
 			_subscriberFactory = subscriberFactory;
 			_logger = localLogger;
 			_messageHandlerFactory = messageHandlerFactory;
+
+			int minWorker, minIoc;
+			ThreadPool.GetMinThreads(out minWorker, out minIoc);
+			if (ThreadPool.SetMinThreads(minWorker * 2, minIoc * 2))
+			{
+				// The minimum number of threads was set successfully.
+			}
+			ThreadPool.GetMaxThreads(out minWorker, out minIoc);
+			if (ThreadPool.SetMaxThreads(minWorker * 2, minIoc * 2))
+			{
+				// The minimum number of threads was set successfully.
+			}
 		}
 
 		public void Start()

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using System.Threading.Tasks;
 using Bsa.Msa.Common;
 using Bsa.Msa.Common.Services.Interfaces;
 using Bsa.Msa.Common.Services.MessageHandling;
@@ -76,7 +75,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				: _messageHandlerSettings.SubscriptionEndpoint;
 
 
-			_messageHandler = _factory.Create<TMessage>(_messageHandlerSettings.Type, _messageHandlerSettings);
+			_messageHandler = _factory.Create<TMessage>(_messageHandlerSettings.Type, _messageHandlerSettings, _simpleBus, _localBus);
 			if (_messageHandlerSettings.UseExchange)
 			{
 				_simpleBus.SubscribeExchange<TMessage>(subscriptionEndpoint,
