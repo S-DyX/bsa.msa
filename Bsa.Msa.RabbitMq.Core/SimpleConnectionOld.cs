@@ -1,12 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using Bsa.Msa.Common;
+﻿using Bsa.Msa.Common;
 using Bsa.Msa.RabbitMq.Core.Interfaces;
 using Bsa.Msa.RabbitMq.Core.Settings;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Bsa.Msa.RabbitMq.Core
 {
@@ -85,7 +85,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		private IModel _model;
 
 		private const int _sleepTime = 500;
-		protected IModel CreateModel()
+		protected IModel CreateModel(string name)
 		{
 			int i = 1;
 			while (!IsConnected)
@@ -97,12 +97,12 @@ namespace Bsa.Msa.RabbitMq.Core
 				}
 				catch (Exception ex)
 				{
-					_logger?.Error(ex.ToString(), ex);
+					_logger?.Error($"name:{name}; message:{ex.ToString()}", ex);
 
 					if (i < 10)
 						i++;
 					var millisecondsTimeout = _sleepTime * i;
-					Task.Delay(millisecondsTimeout);
+					Thread.Sleep(millisecondsTimeout);
 				}
 			}
 			return _model;
@@ -177,7 +177,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			{
 				try
 				{
-					action.Invoke(CreateModel);
+					action.Invoke(() => CreateModel(name));
 					isSuscribed = true;
 				}
 				catch (Exception ex)
@@ -202,7 +202,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				{
 					try
 					{
-						action.Invoke(CreateModel);
+						action.Invoke(() => CreateModel(config.Key));
 						isSuscribed = true;
 					}
 					catch (Exception ex)
@@ -217,13 +217,13 @@ namespace Bsa.Msa.RabbitMq.Core
 		}
 
 		private readonly object _syncSend = new object();
-		public void Execute(Action<Func<IModel>> action)
+		public void Execute(Action<Func<IModel>> action, string name = null)
 		{
 			lock (_syncSend)
 			{
-				action.Invoke(CreateModel);
+				action.Invoke(() => CreateModel(name));
 			}
-			
+
 		}
 
 		public event Action BeforeConnect;
@@ -238,7 +238,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				{
 					try
 					{
-						item.Invoke(CreateModel);
+						item.Invoke(() => CreateModel("unknown"));
 						isSubscribed = true;
 					}
 					catch (Exception ex)

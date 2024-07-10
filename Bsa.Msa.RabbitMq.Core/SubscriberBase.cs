@@ -1,9 +1,10 @@
-﻿using System;
-using System.Threading;
-using Bsa.Msa.Common;
+﻿using Bsa.Msa.Common;
 using Bsa.Msa.Common.Services.Interfaces;
 using Bsa.Msa.Common.Services.MessageHandling;
 using Bsa.Msa.RabbitMq.Core.Interfaces;
+using System;
+using System.Diagnostics;
+using System.Threading;
 
 namespace Bsa.Msa.RabbitMq.Core
 {
@@ -54,11 +55,11 @@ namespace Bsa.Msa.RabbitMq.Core
 				catch (System.IO.EndOfStreamException endOfStreamException)
 				{
 					_simpleBus.Reconnect();
-					_logger.Error($"EndOfStreamException subscription: {_messageHandlerSettings.Type}", endOfStreamException);
+					_logger?.Error($"EndOfStreamException subscription: {_messageHandlerSettings.Type}", endOfStreamException);
 				}
 				catch (Exception ex)
 				{
-					_logger.Error($"Cannot start subscription: {_messageHandlerSettings.Type}", ex);
+					_logger?.Error($"Cannot start subscription: {_messageHandlerSettings.Type}", ex);
 					OnError?.Invoke(this, new UnhandledExceptionEventArgs(ex, false));
 				}
 			}
@@ -67,8 +68,8 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		private void Init()
 		{
-			_logger.Info($"Start subscription: {_messageHandlerSettings.Type}");
-
+			_logger?.Info($"Start subscription: {_messageHandlerSettings.Type}");
+		
 
 			var subscriptionEndpoint = string.IsNullOrEmpty(_messageHandlerSettings.SubscriptionEndpoint)
 				? SimpleBusExtension.GetQueueName<TMessage>()
@@ -87,6 +88,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				_simpleBus.Subscribe<TMessage>(subscriptionEndpoint,
 					message => _messageHandler.Handle(message), _messageHandlerSettings);
 			}
+			_logger?.Info($"End subscription: {_messageHandlerSettings.Type};"); 
 
 		}
 

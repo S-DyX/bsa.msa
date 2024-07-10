@@ -11,7 +11,7 @@ namespace Bsa.Msa.RabbitMq.Core
 	{
 		public static IBusManager CreateBus(this IRabbitMqSettings settings, ILocalLogger logger = null, ISerializeService serializeService = null)
 		{
-			var connection = new SimpleConnection(settings);
+			var connection = new SimpleConnection(settings);	
 			return new BusManager(new SimpleBus(connection, logger, serializeService));
 		}
 

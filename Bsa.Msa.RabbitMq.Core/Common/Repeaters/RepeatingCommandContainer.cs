@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Bsa.Msa.Common.Services.Commands;
 using Bsa.Msa.Common.Services.Interfaces;
@@ -19,7 +20,7 @@ namespace Bsa.Msa.Common.Repeaters
 
 		private IRepeater _repeater;
 		private ICommand _command;
-		private Task _task;
+		private Thread _task;
 
 		public RepeatingCommandContainer(
 			ISettings settings,
@@ -74,7 +75,7 @@ namespace Bsa.Msa.Common.Repeaters
 
 		public void StartAsync()
 		{
-			_task = new Task(Start);
+			_task = new Thread(Start);
 			_task.Start();
 		}
 	}

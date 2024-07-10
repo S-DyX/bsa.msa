@@ -15,7 +15,7 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 
 		void Configure(string name, Action<Func<IModel>> action, bool ignoreException = false);
 
-		void Execute(Action<Func<IModel>> action);
+		void Execute(Action<Func<IModel>> action, string name = null);
 
 		void SubscribeAll();
 
