@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using Bsa.Msa.Common;
 using Bsa.Msa.RabbitMq.Core.Interfaces;
 using Bsa.Msa.RabbitMq.Core.Settings;
@@ -101,7 +102,7 @@ namespace Bsa.Msa.RabbitMq.Core
 					if (i < 10)
 						i++;
 					var millisecondsTimeout = _sleepTime * i;
-					Thread.Sleep(millisecondsTimeout);
+					Task.Delay(millisecondsTimeout);
 				}
 			}
 			return _model;
@@ -126,7 +127,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				catch (Exception ex)
 				{
 					_logger?.Error(ex.ToString(), ex);
-					Thread.Sleep(_sleepTime);
+					Task.Delay(_sleepTime);
 				}
 				finally
 				{
@@ -143,7 +144,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				catch (Exception ex)
 				{
 					_logger?.Error(ex.ToString(), ex);
-					Thread.Sleep(_sleepTime);
+					Task.Delay(_sleepTime);
 				}
 				finally
 				{
@@ -184,7 +185,7 @@ namespace Bsa.Msa.RabbitMq.Core
 					_logger?.Error(ex.ToString(), ex);
 					if (ignoreException)
 						break;
-					Thread.Sleep(1000);
+					Task.Delay(1000);
 				}
 			}
 
@@ -207,7 +208,7 @@ namespace Bsa.Msa.RabbitMq.Core
 					catch (Exception ex)
 					{
 						_logger?.Error(ex.ToString(), ex);
-						Thread.Sleep(_sleepTime * 2);
+						Task.Delay(_sleepTime * 2);
 						// добавить event
 					}
 				}
@@ -243,7 +244,7 @@ namespace Bsa.Msa.RabbitMq.Core
 					catch (Exception ex)
 					{
 						_logger?.Error(ex.ToString(), ex);
-						Thread.Sleep(_sleepTime);
+						Task.Delay(_sleepTime);
 						// добавить event
 					}
 				}

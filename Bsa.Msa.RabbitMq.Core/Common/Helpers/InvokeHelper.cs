@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Bsa.Msa.Common.Helpers
 {
@@ -13,7 +14,7 @@ namespace Bsa.Msa.Common.Helpers
 				{
 					if (i > 0)
 					{
-						Thread.Sleep(timeout);
+						Task.Delay(timeout);
 					}
 
 					var result = func.Invoke();

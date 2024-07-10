@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Bsa.Msa.Common
 {
@@ -40,7 +41,7 @@ namespace Bsa.Msa.Common
 			while (_process.ContainsKey(key))
 			{
 				Console.WriteLine($"Sleep:{key}");
-				Thread.Sleep(waitInterval);
+				Task.Delay(waitInterval);
 			}
 		}
 		public void WaitWhileIsLockTimes(string key, int times, int waitInterval = 500)
@@ -49,7 +50,7 @@ namespace Bsa.Msa.Common
 			while (_process.ContainsKey(key) && times > i)
 			{
 				Console.WriteLine($"Sleep:{key}");
-				Thread.Sleep(waitInterval);
+				Task.Delay(waitInterval);
 				i++;
 			}
 		}
