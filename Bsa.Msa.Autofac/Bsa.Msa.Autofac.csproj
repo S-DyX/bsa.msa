@@ -11,9 +11,9 @@ http://bsasearch.org/msa.html</Description>
     <RepositoryUrl>https://bitbucket.org/SBatyrgareev/bsa.msa/src</RepositoryUrl>
     <PackageProjectUrl>https://github.com/S-DyX/bsa.msa</PackageProjectUrl>
     <PackageTags>MSA Rabbit MQ RabbiMQ RMQ Bsa.Msa.RabbitMq.Core Bsa</PackageTags>
-    <PackageReleaseNotes>Fixed an error reading data from the queue</PackageReleaseNotes>
+    <PackageReleaseNotes>optimized connection to RMQ</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>7.0.3</Version>
+    <Version>7.0.5</Version>
     <AssemblyVersion></AssemblyVersion>
     <Authors>Stanislav Batyrgareev</Authors>
     <FileVersion></FileVersion>
@@ -21,7 +21,7 @@ http://bsasearch.org/msa.html</Description>
 
   <ItemGroup>
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="6.0.0" />
-    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="7.0.2" />
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="7.0.4" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.2" />
   </ItemGroup>
 

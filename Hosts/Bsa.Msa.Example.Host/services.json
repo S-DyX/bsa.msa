@@ -56,7 +56,7 @@
           "subscriptionEndpoint": "test.queue",
           "useExchange": true,
           "publicationEndpoint": "publicationEndpoint",
-          "degreeOfParallelism": 122,
+          "degreeOfParallelism": 1,
           "ttl": 22222222,
           "retry": true,
           "retryCount": 2
@@ -68,7 +68,7 @@
           "subscriptionEndpoint": "test.queue2",
           "useExchange": true,
           "publicationEndpoint": "publicationEndpoint2",
-          "degreeOfParallelism": 1,
+          "degreeOfParallelism": 0,
           "ttl": 22222222,
           "retry": true,
           "retryCount": 2

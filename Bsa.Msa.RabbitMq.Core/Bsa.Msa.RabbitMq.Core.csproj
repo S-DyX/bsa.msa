@@ -10,9 +10,9 @@
     <RepositoryUrl>https://github.com/S-DyX/bsa.msa</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
     <PackageTags>MSA Rabbit MQ RabbiMQ RMQ Queue Message Bsa</PackageTags>
-    <PackageReleaseNotes>Changed to EventingBasicConsumer</PackageReleaseNotes>
+    <PackageReleaseNotes>optimized connection to RMQ</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>7.0.2</Version>
+    <Version>7.0.4</Version>
     <AssemblyVersion></AssemblyVersion>
     <FileVersion></FileVersion>
     <Authors>Stanislav Batyrgareev</Authors>
@@ -21,6 +21,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
-    <PackageReference Include="RabbitMQ.Client" Version="6.6.0" />
+    <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
   </ItemGroup>
 </Project>
