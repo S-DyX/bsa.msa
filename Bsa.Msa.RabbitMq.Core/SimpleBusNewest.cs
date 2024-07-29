@@ -45,7 +45,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			_simpleConnection = simpleConnection;
 			_logger = logger;
 			_serializeService = serializeService ?? new SerializeService();
-			_internalBus = new InternalBus(_serializeService, logger);
+			_internalBus = InternalBus.Create(_serializeService, logger);
 		}
 		public SimpleBus(ISimpleConnection simpleConnection, ILocalLogger logger)
 			: this(simpleConnection, logger, null)
@@ -117,7 +117,19 @@ namespace Bsa.Msa.RabbitMq.Core
 				{
 					Parallel.ForEach(items,
 						new ParallelOptions() { MaxDegreeOfParallelism = _messageHandlerSettings.DegreeOfParallelism },
-						item => { ProcessMessage(queueName, action, getChannel, item, default(TMessage)); });
+						item =>
+						{
+							try
+							{
+
+								ProcessMessage(queueName, action, getChannel, item, default(TMessage));
+							}
+							catch (Exception e)
+							{
+								_logger?.Error($"Error queueName={queueName}: {e.Message}", e);
+							}
+
+						});
 				}
 				while (!isTerminating)
 				{
@@ -258,6 +270,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		private const int _sleepTime = 200;
 		private int _iteration = 1;
+		private List<Task> _tasks = new List<Task>(5);
 		private BasicDeliverEventArgs QueueingBasicConsumer<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel, Action<Func<IModel>> configure)
 		{
 			// если на шину будет больше одного подписчика то надо будет изменить логику
@@ -267,8 +280,8 @@ namespace Bsa.Msa.RabbitMq.Core
 			IDictionary<string, object> headers = null;
 			try
 			{
-				
 
+				_tasks = _tasks.Where(x => x.Status == TaskStatus.Running).ToList();
 				while (_treadCount >= _messageHandlerSettings.DegreeOfParallelism)
 				{
 					Thread.Sleep(10);
@@ -289,17 +302,22 @@ namespace Bsa.Msa.RabbitMq.Core
 					var item = _internalBus.Register(e, queueName, messageAsString);
 					getChannel().BasicAck(e.DeliveryTag, false);
 					Increment();
-					Task.Factory.StartNew(() =>
+					var task = Task.Factory.StartNew(() =>
 					{
 						try
 						{
 							ProcessMessage(queueName, action, getChannel, item, message);
+						}
+						catch (Exception e)
+						{
+							_logger?.Error($"Error queueName={queueName}: {e.Message}", e);
 						}
 						finally
 						{
 							Decrement();
 						}
 					});
+					_tasks.Add(task);
 
 
 				}
@@ -373,7 +391,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				Thread.Sleep(500);
 			}
 			catch (Exception ex)
-			{ 
+			{
 				_logger?.Error($"{queueName};{ex.Message}", ex);
 				Thread.Sleep(200);
 			}
@@ -394,28 +412,29 @@ namespace Bsa.Msa.RabbitMq.Core
 		private static string _retrycount = "retryCount";
 		private byte[] ProcessMessage<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel, InternalBusItem item, TMessage message)
 		{
-			byte[] messageArray = null; 
-			ulong? deliveryTag = null;
+			byte[] messageArray = null;
 			IDictionary<string, object> headers = item.Headers;
 			try
 			{
 				if (message == null)
 				{
-					
+
 					headers = item.Headers;
 					message = _serializeService.Deserialize<TMessage>(item.Body);
 				}
-
+				_logger.Info($"Invoke task messageId:{item.Id}");
 				action.Invoke(message);
-				_internalBus.Ack(item.DeliveryTag);
+				_internalBus.Ack(item.Id);
+				_logger.Info($"Ack messageId:{item.Id}");
 			}
 			catch (Exception exception)
 			{
+				_logger?.Error($"messageId:{item.Id};Error queueName={queueName}: {exception.Message}", exception);
 				messageArray = Encoding.UTF8.GetBytes(item.Body);
 				if (_messageHandlerSettings.Retry)
 				{
 					var retryCount = 0;
-					
+
 					if (headers.ContainsKey(_retrycount))
 					{
 						retryCount = (int)headers[_retrycount];
@@ -431,7 +450,6 @@ namespace Bsa.Msa.RabbitMq.Core
 					}
 					else
 					{
-						_logger?.Error($"Error queueName={queueName}: {exception.Message}", exception);
 						retryCount++;
 						headers[_retrycount] = retryCount;
 						Send(getChannel(), queueName, messageArray, headers);
@@ -441,7 +459,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				{
 					SendErrorMessage(getChannel(), queueName, messageArray, exception);
 				}
-				_internalBus.Ack(item.DeliveryTag);
+				_internalBus.Ack(item.Id);
 			}
 
 			return messageArray;

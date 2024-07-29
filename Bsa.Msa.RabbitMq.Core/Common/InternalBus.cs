@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Bsa.Msa.RabbitMq.Core.Common
@@ -18,9 +19,9 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 		private readonly string _folder;
 		private bool _isReady;
 		private readonly object _lock = new object();
-		private ConcurrentDictionary<ulong, InternalBusItem> _concurrent =
-			new ConcurrentDictionary<ulong, InternalBusItem>();
-		public InternalBus(ISerializeService serializeService, ILocalLogger localLogger)
+		private ConcurrentDictionary<string, InternalBusItem> _concurrent =
+			new ConcurrentDictionary<string, InternalBusItem>();
+		private InternalBus(ISerializeService serializeService, ILocalLogger localLogger)
 		{
 			_serializeService = serializeService;
 			_localLogger = localLogger;
@@ -28,6 +29,24 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 			if (!Directory.Exists(_folder))
 				Directory.CreateDirectory(_folder);
 			Task.Factory.StartNew(Load);
+		}
+
+		private static InternalBus _instance;
+		private static readonly object _sync = new object();
+		public static InternalBus Create(ISerializeService serializeService, ILocalLogger localLogger)
+		{
+			if (_instance == null)
+			{
+				lock (_sync)
+				{
+					if (_instance == null)
+					{
+						Interlocked.Exchange(ref _instance, new InternalBus(serializeService, localLogger));
+					}
+				}
+			}
+
+			return _instance;
 		}
 
 		public List<InternalBusItem> Get(string queue)
@@ -41,6 +60,8 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 		{
 			lock (_lock)
 			{
+				if (_isReady)
+					return;
 				var files = Directory.GetFiles(_folder, "*.q", SearchOption.AllDirectories);
 				Parallel.ForEach(files, file =>
 				{
@@ -52,8 +73,15 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 						var bytes = Convert.FromBase64String(str);
 						var value = Encoding.UTF8.GetString(bytes);
 						var obj = _serializeService.Deserialize<InternalBusItem>(value);
+						if (obj.Id == null)
+							obj.Id = Guid.NewGuid().ToString();
 						obj.FileName = file;
-						_concurrent.TryAdd(obj.DeliveryTag, obj);
+						//if (_concurrent.ContainsKey(obj.Id))
+						//{
+						//	var temp = _concurrent[obj.ConsumerTag];
+						//}
+
+						_concurrent.TryAdd(obj.Id, obj);
 					}
 					catch (Exception e)
 					{
@@ -71,11 +99,11 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 		{
 			var properties = eventArgs.BasicProperties;
 			var headers = properties.Headers ?? new Dictionary<string, object>();
-			var id = eventArgs.DeliveryTag;
+			var deliveryTag = eventArgs.DeliveryTag;
 			var subFolder = Path.Combine(_folder, queue.ComputeMd5String());
 			var temp = DateTime.UtcNow;
 			if (_folders.TryGetValue(subFolder, out temp))
-			{ 
+			{
 				if (temp <= DateTime.UtcNow)
 					_folders.TryRemove(subFolder, out temp);
 			}
@@ -85,10 +113,12 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 				_folders[subFolder] = DateTime.UtcNow.AddMinutes(10);
 			}
 
-			var fileName = Path.Combine(subFolder, $"{Guid.NewGuid()}.q");
+			var id = Guid.NewGuid().ToString();
+			var fileName = Path.Combine(subFolder, $"{id}.q");
 			var obj = new InternalBusItem()
 			{
-				DeliveryTag = id,
+				Id = id,
+				DeliveryTag = deliveryTag,
 				RoutingKey = eventArgs.RoutingKey,
 				ConsumerTag = eventArgs.ConsumerTag,
 				Exchange = eventArgs.Exchange,
@@ -100,11 +130,11 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 			var str = _serializeService.Serialize(obj);
 
 			File.WriteAllText(fileName, Convert.ToBase64String(Encoding.UTF8.GetBytes(str)));
-			_concurrent.TryAdd(id, obj);
+			_concurrent.TryAdd(obj.Id, obj);
 			return obj;
 		}
 
-		public void Ack(ulong id)
+		public void Ack(string id)
 		{
 			InternalBusItem val = null;
 			if (_concurrent.TryRemove(id, out val))
@@ -120,6 +150,7 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 
 	internal sealed class InternalBusItem
 	{
+		public string Id { get; set; }
 		public string Queue { get; set; }
 		public ulong DeliveryTag { get; set; }
 		public string RoutingKey { get; set; }
