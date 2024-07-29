@@ -369,13 +369,13 @@ namespace Bsa.Msa.RabbitMq.Core
 			}
 			catch (OperationInterruptedException ex)
 			{
-				_logger?.Error(ex.Message, ex);
+				_logger?.Error($"{queueName};{ex.Message}", ex);
 				Thread.Sleep(500);
 			}
 			catch (Exception ex)
-			{
-				Console.WriteLine($"{queueName};{ex.ToString()}");
-				_logger?.Error(ex.Message, ex);
+			{ 
+				_logger?.Error($"{queueName};{ex.Message}", ex);
+				Thread.Sleep(200);
 			}
 			finally
 			{
@@ -391,7 +391,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			}
 			return e;
 		}
-
+		private static string _retrycount = "retryCount";
 		private byte[] ProcessMessage<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel, InternalBusItem item, TMessage message)
 		{
 			byte[] messageArray = null; 
@@ -411,13 +411,14 @@ namespace Bsa.Msa.RabbitMq.Core
 			}
 			catch (Exception exception)
 			{
+				messageArray = Encoding.UTF8.GetBytes(item.Body);
 				if (_messageHandlerSettings.Retry)
 				{
-					messageArray = Encoding.UTF8.GetBytes(item.Body);
 					var retryCount = 0;
-					if (headers.ContainsKey("retryCount"))
+					
+					if (headers.ContainsKey(_retrycount))
 					{
-						retryCount = (int)headers["retryCount"];
+						retryCount = (int)headers[_retrycount];
 					}
 
 					if (_messageHandlerSettings.RetryCount.HasValue &&
@@ -427,22 +428,20 @@ namespace Bsa.Msa.RabbitMq.Core
 							$"retry count exceeded {retryCount}>{_messageHandlerSettings.RetryCount.Value}. Error queueName={queueName}: {exception.Message}",
 							exception);
 						SendErrorMessage(getChannel(), queueName, messageArray, exception);
-						_internalBus.Ack(item.DeliveryTag);
 					}
 					else
 					{
 						_logger?.Error($"Error queueName={queueName}: {exception.Message}", exception);
 						retryCount++;
-						headers["retryCount"] = retryCount;
+						headers[_retrycount] = retryCount;
 						Send(getChannel(), queueName, messageArray, headers);
-						_internalBus.Ack(item.DeliveryTag);
 					}
 				}
 				else
 				{
 					SendErrorMessage(getChannel(), queueName, messageArray, exception);
-					_internalBus.Ack(item.DeliveryTag);
 				}
+				_internalBus.Ack(item.DeliveryTag);
 			}
 
 			return messageArray;

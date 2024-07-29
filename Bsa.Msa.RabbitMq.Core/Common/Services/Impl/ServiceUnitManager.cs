@@ -78,7 +78,7 @@ namespace Bsa.Msa.Common.Services.Impl
 			_subscribers.ForEach(x =>
 			{
 				x.StartAsync();
-				Thread.Sleep(50);
+				Thread.Sleep(200);
 			});
 		}
 
