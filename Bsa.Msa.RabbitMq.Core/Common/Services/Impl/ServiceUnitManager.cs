@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading;
-using Bsa.Msa.Common.Repeaters;
+﻿using Bsa.Msa.Common.Repeaters;
 using Bsa.Msa.Common.Services.Commands;
 using Bsa.Msa.Common.Services.Interfaces;
 using Bsa.Msa.Common.Services.MessageHandling;
 using Bsa.Msa.Common.Services.Settings;
+using System;
+using System.Collections.Generic;
+using System.Threading;
 
 namespace Bsa.Msa.Common.Services.Impl
 {
@@ -22,7 +22,7 @@ namespace Bsa.Msa.Common.Services.Impl
 
 
 		public ServiceUnitManager(IServicesSettings servicesSection,
-			ILocalLogger localLogger, 
+			ILocalLogger localLogger,
 			ICommandFactory commandFactory,
 			IRepeaterFactory repeaterFactory,
 			ISubscriberFactory subscriberFactory,
@@ -57,7 +57,7 @@ namespace Bsa.Msa.Common.Services.Impl
 				var handlers = service.GetHandlers();
 				foreach (var handler in handlers)
 				{
-					Create(handler);
+					CreateNew(handler);
 				}
 				var commands = service.GetCommands();
 				foreach (var commandSetting in commands)
@@ -75,7 +75,11 @@ namespace Bsa.Msa.Common.Services.Impl
 				x.StartAsync();
 				Thread.Sleep(50);
 			});
-			_subscribers.ForEach(x => x.StartAsync());
+			_subscribers.ForEach(x =>
+			{
+				x.StartAsync();
+				Thread.Sleep(50);
+			});
 		}
 
 		private void Create(MessageHandlerSettings handler)
@@ -89,7 +93,21 @@ namespace Bsa.Msa.Common.Services.Impl
 			}
 			_logger.Info($"Created: Subscriber:{handler.Type}, Count:{handler.DegreeOfParallelism}");
 		}
+		private void CreateNew(MessageHandlerSettings handler)
+		{
+			if (handler.DegreeOfParallelism > 0)
+			{
+				//for (var index = 0; index < handler.DegreeOfParallelism; index++)
+				{
+					var sub = _subscriberFactory.Create(handler.Type, handler, _messageHandlerFactory);
+					sub.OnError += HandleServiceUnitError;
+					_subscribers.Add(sub);
 
+				}
+			}
+
+			_logger.Info($"Created: Subscriber:{handler.Type}, Count:{handler.DegreeOfParallelism}");
+		}
 		public void Stop()
 		{
 			foreach (var sub in _serviceUnits)

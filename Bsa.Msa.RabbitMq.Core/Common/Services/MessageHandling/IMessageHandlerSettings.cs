@@ -19,6 +19,8 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 
 		ushort PrefetchCount { get; }
 
+		int DegreeOfParallelism { get; }
+
 		void SetSubscriptionEndpoint(string subscriptionEndpoint);
 
 		int? Ttl { get; }

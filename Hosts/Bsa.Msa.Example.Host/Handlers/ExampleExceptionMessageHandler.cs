@@ -14,7 +14,7 @@ namespace Bsa.Msa.Example.Host.Handlers
 	{
 	}
 
-	public sealed class ExampleExceptionMessageHandler : IMessageHandler<ExampleExceptionMessage>
+	public sealed class ExampleExceptionMessageHandler : IMessageHandler<ExampleMessage>
 	{
 		private readonly IBusManager _busManager;
 		private readonly ISettings _settings;
@@ -26,7 +26,7 @@ namespace Bsa.Msa.Example.Host.Handlers
 			this._settings = settings;
 			_serviceRegistryFactory = serviceRegistryFactory;
 		}
-		public void Handle(ExampleExceptionMessage message)
+		public void Handle(ExampleMessage message)
 		{
 			throw new NotImplementedException("Test");
 		}
