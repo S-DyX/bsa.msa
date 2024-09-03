@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace Bsa.Msa.RabbitMq.Core
 {
-	public class SimpleBus : ISimpleBus
+	public class SimpleBusNewest : ISimpleBus
 	{
 		private readonly ISimpleConnection _simpleConnection;
 		private readonly ILocalLogger _logger;
@@ -40,19 +40,19 @@ namespace Bsa.Msa.RabbitMq.Core
 			lock (_lock)
 				Interlocked.Decrement(ref _treadCount);
 		}
-		public SimpleBus(ISimpleConnection simpleConnection, ILocalLogger logger, ISerializeService serializeService)
+		public SimpleBusNewest(ISimpleConnection simpleConnection, ILocalLogger logger, ISerializeService serializeService)
 		{
 			_simpleConnection = simpleConnection;
 			_logger = logger;
 			_serializeService = serializeService ?? new SerializeService();
 			_internalBus = InternalBus.Create(_serializeService, logger);
 		}
-		public SimpleBus(ISimpleConnection simpleConnection, ILocalLogger logger)
+		public SimpleBusNewest(ISimpleConnection simpleConnection, ILocalLogger logger)
 			: this(simpleConnection, logger, null)
 		{
 		}
 
-		public SimpleBus(ISimpleConnection simpleConnection)
+		public SimpleBusNewest(ISimpleConnection simpleConnection)
 			: this(simpleConnection, null, null)
 		{
 		}

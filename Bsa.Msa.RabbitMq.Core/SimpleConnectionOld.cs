@@ -29,7 +29,7 @@ namespace Bsa.Msa.RabbitMq.Core
 					try
 					{
 						_connection = ConnectionFactory.CreateConnection();
-						ConnectionFactory.AutomaticRecoveryEnabled = false;
+						ConnectionFactory.AutomaticRecoveryEnabled = true;
 					}
 					catch (Exception ex)
 					{
