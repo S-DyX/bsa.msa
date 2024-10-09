@@ -263,7 +263,8 @@ namespace Bsa.Msa.RabbitMq.Core
 				getChannel().BasicConsume(queueName, false, _consumer);
 
 				ProcessFromLocalBus(queueName, action, getChannel);
-
+				if (_tasks.Count < _messageHandlerSettings.DegreeOfParallelism)
+					_tasks.Add(new AsyncWorker(_logger, _queue));
 				_consumer.Received += consumerOnReceived(queueName, action, getChannel);
 			}
 		}
@@ -276,10 +277,11 @@ namespace Bsa.Msa.RabbitMq.Core
 				var items = _internalBus.Get(queueName);
 				if (items.FastAny())
 				{
-					Parallel.ForEach(items,
-						new ParallelOptions() { MaxDegreeOfParallelism = _messageHandlerSettings.DegreeOfParallelism },
-						item =>
+					foreach (var item in items)
+					{
+						Action a = () =>
 						{
+							Increment();
 							try
 							{
 								ProcessMessage(queueName, action, getChannel, item, default(TMessage));
@@ -288,7 +290,14 @@ namespace Bsa.Msa.RabbitMq.Core
 							{
 								_logger?.Error($"Error queueName={queueName}: {e.Message}", e);
 							}
-						});
+							finally
+							{
+								Decrement();
+							}
+						};
+
+						_queue.Enqueue(a);
+					}
 				}
 			}
 			catch (Exception e)
@@ -362,7 +371,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				ulong? deliveryTag = null;
 				try
 				{
-					ProcessFromLocalBus(queueName, action, getChannel);
+					//ProcessFromLocalBus(queueName, action, getChannel);
 					var tasks = _tasks.Where(x => x.IsActive).ToList();
 					while (tasks.Count >= _messageHandlerSettings.DegreeOfParallelism)
 					{

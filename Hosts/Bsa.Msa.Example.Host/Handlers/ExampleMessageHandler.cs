@@ -5,6 +5,8 @@ using FileStorage.Contracts.Rest.Impl.FileStorage;
 using Newtonsoft.Json;
 using Service.Registry.Common;
 using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace Bsa.Msa.Example.Host.Handlers
 {
@@ -37,15 +39,15 @@ namespace Bsa.Msa.Example.Host.Handlers
 			Console.Write($"Processed: {JsonConvert.SerializeObject(message)}");
 			//System.Threading.Thread.Sleep(2000);
 
-			//var id = _proxy.GetIdByExternal(message.FileName);
-			//var bytes = new List<byte>(20000 * 4);
-			//for (int i = 0; i < 20000; i++)
-			//{
-			//	var chars = i.ToString();
-			//	bytes.AddRange(Encoding.UTF8.GetBytes(chars));
-			//}
-			//_proxy.SaveBytes(id, bytes.ToArray(), message.Name, Guid.NewGuid().ToString());
-			//var size = _proxy.GetSize(id, message.Name);
+			var id = _proxy.GetIdByExternal(message.FileName);
+			var bytes = new List<byte>(20000 * 4);
+			for (int i = 0; i < 20000; i++)
+			{
+				var chars = i.ToString();
+				bytes.AddRange(Encoding.UTF8.GetBytes(chars));
+			}
+			_proxy.SaveBytes(id, bytes.ToArray(), message.Name, Guid.NewGuid().ToString());
+			var size = _proxy.GetSize(id, message.Name);
 		}
 	}
 }
