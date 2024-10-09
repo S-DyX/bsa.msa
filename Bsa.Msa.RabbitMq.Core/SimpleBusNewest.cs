@@ -145,7 +145,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			};
 			_simpleConnection.AfterConnect += () =>
 			{
-				_logger?.Info($"End subscription: {_messageHandlerSettings.Type};");
+				_logger?.Info($"AfterConnect End subscription: {_messageHandlerSettings.Type};");
 			};
 			// выполняем подписку
 			_simpleConnection.SubscribeAll();

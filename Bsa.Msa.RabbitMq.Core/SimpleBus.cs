@@ -353,7 +353,8 @@ namespace Bsa.Msa.RabbitMq.Core
 
 			return messageArray;
 		}
-		private List<Task> _tasks = new List<Task>(5);
+		private List<AsyncWorker> _tasks = new List<AsyncWorker>(5);
+		private ConcurrentQueue<Action> _queue = new ConcurrentQueue<Action>();
 		private EventHandler<BasicDeliverEventArgs> consumerOnReceived<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel)
 		{
 			return (ch, e) =>
@@ -362,11 +363,12 @@ namespace Bsa.Msa.RabbitMq.Core
 				try
 				{
 					ProcessFromLocalBus(queueName, action, getChannel);
-					_tasks = _tasks.Where(x => x.Status == TaskStatus.Running).ToList();
-					while (_treadCount >= _messageHandlerSettings.DegreeOfParallelism)
+					var tasks = _tasks.Where(x => x.IsActive).ToList();
+					while (tasks.Count >= _messageHandlerSettings.DegreeOfParallelism)
 					{
 						Thread.Sleep(0);
-						_logger.Debug($"Sleep {_queueName}");
+						_logger.Debug($"To many threads Sleep {_queueName};{tasks.Count}>{_messageHandlerSettings.DegreeOfParallelism}");
+						tasks = _tasks.Where(x => x.IsActive).ToList();
 					}
 					var body = e.Body;
 					var properties = e.BasicProperties;
@@ -378,9 +380,10 @@ namespace Bsa.Msa.RabbitMq.Core
 
 						var item = _internalBus.Register(e, queueName, messageAsString);
 						getChannel().BasicAck(e.DeliveryTag, false);
-						Increment();
-						var task = Task.Factory.StartNew(() =>
+
+						Action a = () =>
 						{
+							Increment();
 							try
 							{
 								ProcessMessage(queueName, action, getChannel, item, message);
@@ -393,8 +396,11 @@ namespace Bsa.Msa.RabbitMq.Core
 							{
 								Decrement();
 							}
-						});
-						_tasks.Add(task);
+						};
+
+						_queue.Enqueue(a);
+						if (_tasks.Count < _messageHandlerSettings.DegreeOfParallelism)
+							_tasks.Add(new AsyncWorker(_logger, _queue));
 					}
 					catch (JsonException jre)
 					{

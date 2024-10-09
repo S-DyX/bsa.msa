@@ -88,7 +88,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				_simpleBus.Subscribe<TMessage>(subscriptionEndpoint,
 					message => _messageHandler.Handle(message), _messageHandlerSettings);
 			}
-			_logger?.Info($"End subscription: {_messageHandlerSettings.Type};"); 
+			_logger?.Info($"End setup subscription: {_messageHandlerSettings.Type};"); 
 
 		}
 
