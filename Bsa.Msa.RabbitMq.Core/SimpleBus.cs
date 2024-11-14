@@ -256,15 +256,17 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			//if (!TryGet(queueName, getChannel, configure, out e, ref _consumer))
 			//	return null;
+			ProcessFromLocalBus(queueName, action, getChannel);
+			if (_tasks.Count < _messageHandlerSettings.DegreeOfParallelism)
+				_tasks.Add(new AsyncWorker(_logger, _queue));
+
 			if (getChannel().IsClosed || _consumer == null)
 			{
 				configure.Invoke(getChannel);
 				_consumer = new EventingBasicConsumer(getChannel.Invoke());
 				getChannel().BasicConsume(queueName, false, _consumer);
 
-				ProcessFromLocalBus(queueName, action, getChannel);
-				if (_tasks.Count < _messageHandlerSettings.DegreeOfParallelism)
-					_tasks.Add(new AsyncWorker(_logger, _queue));
+
 				_consumer.Received += consumerOnReceived(queueName, action, getChannel);
 			}
 		}
@@ -277,7 +279,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				var items = _internalBus.Get(queueName);
 				if (items.FastAny())
 				{
-					foreach (var item in items)
+					Parallel.ForEach(items, item =>
 					{
 						Action a = () =>
 						{
@@ -297,7 +299,7 @@ namespace Bsa.Msa.RabbitMq.Core
 						};
 
 						_queue.Enqueue(a);
-					}
+					});
 				}
 			}
 			catch (Exception e)

@@ -3,7 +3,6 @@ using Bsa.Msa.Common.Services.Interfaces;
 using Bsa.Msa.Common.Services.MessageHandling;
 using Bsa.Msa.RabbitMq.Core.Interfaces;
 using System;
-using System.Diagnostics;
 using System.Threading;
 
 namespace Bsa.Msa.RabbitMq.Core
@@ -62,6 +61,7 @@ namespace Bsa.Msa.RabbitMq.Core
 					_logger?.Error($"Cannot start subscription: {_messageHandlerSettings.Type}", ex);
 					OnError?.Invoke(this, new UnhandledExceptionEventArgs(ex, false));
 				}
+				Thread.Sleep(200);
 			}
 
 		}
@@ -69,7 +69,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		private void Init()
 		{
 			_logger?.Info($"Start subscription: {_messageHandlerSettings.Type}");
-		
+
 
 			var subscriptionEndpoint = string.IsNullOrEmpty(_messageHandlerSettings.SubscriptionEndpoint)
 				? SimpleBusExtension.GetQueueName<TMessage>()
@@ -88,7 +88,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				_simpleBus.Subscribe<TMessage>(subscriptionEndpoint,
 					message => _messageHandler.Handle(message), _messageHandlerSettings);
 			}
-			_logger?.Info($"End setup subscription: {_messageHandlerSettings.Type};"); 
+			_logger?.Info($"End setup subscription: {_messageHandlerSettings.Type};");
 
 		}
 

@@ -3,6 +3,8 @@ using Bsa.Msa.Common.Services.Commands;
 using Bsa.Msa.Common.Services.Interfaces;
 using Bsa.Msa.Common.Services.MessageHandling;
 using Bsa.Msa.Common.Services.Settings;
+using Bsa.Msa.RabbitMq.Core;
+using Bsa.Msa.RabbitMq.Core.Common;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -20,6 +22,7 @@ namespace Bsa.Msa.Common.Services.Impl
 		private readonly List<ISubscriber> _subscribers = new List<ISubscriber>();
 		private readonly List<IServiceUnit> _serviceUnits = new List<IServiceUnit>();
 
+		private readonly InternalBus _internalBus;
 
 		public ServiceUnitManager(IServicesSettings servicesSection,
 			ILocalLogger localLogger,
@@ -27,6 +30,16 @@ namespace Bsa.Msa.Common.Services.Impl
 			IRepeaterFactory repeaterFactory,
 			ISubscriberFactory subscriberFactory,
 			IMessageHandlerFactory messageHandlerFactory)
+		: this(servicesSection, localLogger, commandFactory, repeaterFactory, subscriberFactory, messageHandlerFactory, null)
+		{
+		}
+		public ServiceUnitManager(IServicesSettings servicesSection,
+			ILocalLogger localLogger,
+			ICommandFactory commandFactory,
+			IRepeaterFactory repeaterFactory,
+			ISubscriberFactory subscriberFactory,
+			IMessageHandlerFactory messageHandlerFactory,
+			ISerializeService serializeService)
 		{
 			if (servicesSection == null) throw new ArgumentNullException("servicesSection");
 
@@ -48,10 +61,15 @@ namespace Bsa.Msa.Common.Services.Impl
 			{
 				// The minimum number of threads was set successfully.
 			}
+			serializeService = serializeService ?? new SerializeService();
+			_internalBus = InternalBus.Create(serializeService, _logger);
 		}
 
 		public void Start()
 		{
+			_logger.Info($"Start load local bus");
+			_internalBus.Load();
+			_logger.Info($"End load local bus");
 			foreach (var service in _servicesSection.GetServices())
 			{
 				var handlers = service.GetHandlers();
