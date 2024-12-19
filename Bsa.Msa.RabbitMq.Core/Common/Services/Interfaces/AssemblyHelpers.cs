@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 
 namespace Bsa.Msa.Common.Services.Interfaces
 {
@@ -35,7 +34,10 @@ namespace Bsa.Msa.Common.Services.Interfaces
 			{
 				try
 				{
-
+					if (file.ToLower().StartsWith("microsoft"))
+						continue;
+					if (file.ToLower().StartsWith("system"))
+						continue;
 					var assembly = Assembly.LoadFile(file);
 					if (assenblies.Contains(assembly))
 						continue;

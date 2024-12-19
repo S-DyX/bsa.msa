@@ -52,12 +52,18 @@
         {
           "name": "ExampleExceptionMessageHandler",
           "type": "ExampleExceptionMessageHandler",
-          "subscriptionEndpoint": "test.queue3",
-          "publicationEndpoint": "",
+          "subscriptionEndpoint": "test.queue4",
           "degreeOfParallelism": 11,
           "retryCount": 2,
-          "useExchange": true,
+          //"useExchange": true,
           "retry": true
+        },
+        {
+          "name": "EmptyMessageHandler",
+          "description": "EmptyMessageHandler a message is sent to a queue and the queue's message handler is registered in the current process, the message will be sent to the local bus",
+          "type": "EmptyMessageHandler",
+          "subscriptionEndpoint": "test.queue2",
+          "degreeOfParallelism": 50
         },
         {
           "name": "testHandler",
@@ -66,7 +72,7 @@
           "subscriptionEndpoint": "test.queue",
           "useExchange": true,
           "publicationEndpoint": "publicationEndpoint",
-          "degreeOfParallelism": 0,
+          "degreeOfParallelism": 40,
           "ttl": 22222222,
           "retry": true,
           "retryCount": 2
