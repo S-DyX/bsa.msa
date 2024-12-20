@@ -16,18 +16,37 @@ namespace Bsa.Msa.Common.Services.Interfaces
 
 			foreach (var assembly in assenblies)
 			{
-				var commands = assembly.GetTypes();
-				foreach (var t in commands)
+				try
 				{
-
-					if (!type.IsAssignableFrom(t))
-					{
+					var name = assembly.GetName().Name;
+					if (!string.IsNullOrEmpty(name)
+						&& (name.StartsWith("microsoft")
+						 || name.StartsWith("system")))
 						continue;
-					}
-					typesList.Add(t);
 
+					var commands = assembly.GetTypes();
+					foreach (var t in commands)
+					{
+
+						if (!type.IsAssignableFrom(t))
+						{
+							continue;
+						}
+						typesList.Add(t);
+
+					}
+				}
+				catch (Exception e)
+				{
 				}
 			}
+			LoadFiles(type, assenblies, typesList);
+
+			return typesList;
+		}
+
+		private static void LoadFiles(Type type, Assembly[] assenblies, List<Type> typesList)
+		{
 			var files = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "*.dll");
 
 			foreach (var file in files)
@@ -49,14 +68,11 @@ namespace Bsa.Msa.Common.Services.Interfaces
 							typesList.Add(p);
 						}
 					}
-
 				}
 				catch (Exception e)
 				{
 				}
 			}
-
-			return typesList;
 		}
 	}
 }
