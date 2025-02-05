@@ -62,10 +62,12 @@ namespace Bsa.Msa.RabbitMq.Core
 		public void Subscribe<TMessage>(string queueName, Action<TMessage> action, IMessageHandlerSettings messageHandlerSettings)
 		{
 			_messageHandlerSettings = messageHandlerSettings;
+			if (messageHandlerSettings.AppendGuid)
+				queueName = $"{queueName}_{Guid.NewGuid()}";
 			Action<Func<IModel>> configureAction = getChannel =>
 			{
 				var dictionary = GetArguments(messageHandlerSettings);
-				getChannel().QueueDeclare(queueName, true, false, false, dictionary);
+				getChannel().QueueDeclare(queueName, true, false, messageHandlerSettings.AutoDelete, dictionary);
 				getChannel().BasicQos(0, messageHandlerSettings.PrefetchCount, false);
 			};
 			//_simpleConnection.Configure(queueName, configureAction);
@@ -89,6 +91,8 @@ namespace Bsa.Msa.RabbitMq.Core
 		public void SubscribeExchange<TMessage>(string queueName, Action<TMessage> action, IMessageHandlerSettings messageHandlerSettings)
 		{
 			_messageHandlerSettings = messageHandlerSettings;
+			if (messageHandlerSettings.AppendGuid)
+				queueName = $"{queueName}_{Guid.NewGuid()}";
 			//ConfigureExchange<TMessage>(queueName);
 
 			Consume<TMessage>(queueName, action, GetExchangeConfigure<TMessage>(queueName, messageHandlerSettings));
@@ -109,10 +113,14 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		private void Consume<TMessage>(string queueName, Action<TMessage> action, Action<Func<IModel>> configure)
 		{
+
 			_queueName = queueName;
+
 			// добавляем действия на подписку
 			_simpleConnection.Add(getChannel =>
 			{
+				if (_messageHandlerSettings.ClearAfterStart)
+					getChannel.Invoke().QueuePurge(queueName);
 				//while (!isTerminating)
 				{
 					QueueingBasicConsumer(queueName, action, getChannel, configure);
@@ -156,7 +164,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			{
 				var exchangeName = SimpleBusExtension.GetExchangeName<TMessage>();
 				getModel().ExchangeDeclare(exchangeName, type, true);
-				getModel().QueueDeclare(queueName, true, false, false, dictionary);
+				getModel().QueueDeclare(queueName, true, false, _messageHandlerSettings.AutoDelete, dictionary);
 				getModel().QueueBind(queueName, exchangeName, routingKey ?? String.Empty);
 				getModel().BasicQos(0, _messageHandlerSettings?.PrefetchCount ?? (ushort)5, false);
 

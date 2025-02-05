@@ -60,7 +60,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		public void Dispose()
 		{
 			_isRun = false;
-			_thread.Abort();
+			//_thread.Abort();
 		}
 	}
 }

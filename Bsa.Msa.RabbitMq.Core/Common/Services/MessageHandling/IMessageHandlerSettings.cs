@@ -25,6 +25,14 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 
 		int? Ttl { get; }
 
+		bool ClearAfterStart { get; }
+		bool AutoDelete { get; }
+		/// <summary>
+		/// Add guid to the query 
+		/// </summary>
+		bool AppendGuid { get; }
+
+
 	}
 
 }

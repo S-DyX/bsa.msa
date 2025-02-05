@@ -112,6 +112,8 @@ namespace Bsa.Msa.RabbitMq.Core
 			// добавляем действия на подписку
 			_simpleConnection.Add(getChannel =>
 			{
+				if (_messageHandlerSettings.ClearAfterStart)
+					getChannel.Invoke().QueuePurge(queueName);
 				var items = _internalBus.Get(queueName);
 				if (items.FastAny())
 				{
@@ -284,7 +286,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				_tasks = _tasks.Where(x => x.Status == TaskStatus.Running).ToList();
 				while (_treadCount >= _messageHandlerSettings.DegreeOfParallelism)
 				{
-					Thread.Sleep(10);
+					Thread.Sleep(0);
 					_logger.Info($"Sleep");
 				}
 

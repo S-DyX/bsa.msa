@@ -46,6 +46,9 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 			Type = GetAttValue(raw, "type");
 			RoutingKey = GetAttValue(raw, "routingKey");
 			Retry = GetAttBoolValue(raw, "retry", false);
+			ClearAfterStart=GetAttBoolValue(raw, "clearAfterStart", false);
+			AutoDelete = GetAttBoolValue(raw, "autoDelete", false);
+			AutoDelete = GetAttBoolValue(raw, "appendGuid", false);
 			RetryCount = GetAttIntValue(raw, "retryCount");
 			SubscriptionEndpoint = GetAttValue(raw, "subscriptionEndpoint");
 			UseExchange = GetAttBoolValue(raw, "useExchange", false);
@@ -107,6 +110,22 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 		}
 
 		public int? Ttl
+		{
+			get;
+			protected set;
+		}
+
+		public bool ClearAfterStart
+		{
+			get;
+			protected set;
+		}
+		public bool AutoDelete
+		{
+			get;
+			protected set;
+		}
+		public bool AppendGuid
 		{
 			get;
 			protected set;
