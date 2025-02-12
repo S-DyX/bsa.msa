@@ -59,11 +59,12 @@
           "retry": true
         },
         {
-          "name": "EmptyMessageHandler",
+          "name": "EmptyMessageHandlerAsync",
           "description": "EmptyMessageHandler a message is sent to a queue and the queue's message handler is registered in the current process, the message will be sent to the local bus",
-          "type": "EmptyMessageHandler",
-          "subscriptionEndpoint": "test.queue2",
-          "degreeOfParallelism": 50
+          "type": "EmptyMessageHandlerAsync",
+          "subscriptionEndpoint": "test.queue12",
+          "useExchange": true,
+          "degreeOfParallelism": 5
         },
         {
           "name": "testHandler",
@@ -72,7 +73,7 @@
           "subscriptionEndpoint": "test.queue",
           "useExchange": true,
           "publicationEndpoint": "publicationEndpoint",
-          "degreeOfParallelism": 40,
+          "degreeOfParallelism": 0,
           "ttl": 22222222,
           "retry": true,
           "retryCount": 2

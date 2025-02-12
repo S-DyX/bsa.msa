@@ -18,14 +18,14 @@ namespace Bsa.Msa.Common.Services.Impl
 			this.registry = registry;
 			this._localContainer = localContainer;
 		}
-		public IMessageHandler<TMessage> Create<TMessage>(string type, ISettings settings, ISimpleBus simpleBus, ILocalBus localBus)
+		public IMessageHandler Create<TMessage>(string type, ISettings settings, ISimpleBus simpleBus, ILocalBus localBus)
 		{
 			var handlerType = registry.ResolveHandler(type);
 			if (handlerType == null)
 				throw new InvalidOperationException($"Type not found {type}");
 			var constructor = handlerType.GetConstructor(Type.EmptyTypes);
 			if (constructor != null)
-				return Activator.CreateInstance(handlerType) as IMessageHandler<TMessage>;
+				return Activator.CreateInstance(handlerType) as IMessageHandler;
 
 			var constructors = handlerType.GetConstructors();
 			var result = new List<object>();
@@ -61,7 +61,7 @@ namespace Bsa.Msa.Common.Services.Impl
 				}
 			}
 			object[] args = result.ToArray();
-			return Activator.CreateInstance(handlerType, args) as IMessageHandler<TMessage>;
+			return Activator.CreateInstance(handlerType, args) as IMessageHandler;
 		}
 
 		public IMessageHandler<TMessage, TResponse> Create<TMessage, TResponse>(string type, ISettings settings, ISimpleBus simpleBus, ILocalBus localBus)

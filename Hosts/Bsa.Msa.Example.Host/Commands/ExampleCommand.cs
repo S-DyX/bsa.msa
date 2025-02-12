@@ -32,6 +32,16 @@ namespace Bsa.Msa.Example.Host.Commands
 
 		public void Execute()
 		{
+            for (int i = 0; i < 10; i++)
+            {
+                _singleRmqBus.Publish(new EmptyMessage()
+                {
+                    FileName = $"Name{i}",
+                    Hash = "Hash",
+                    Name = "Name"
+                });
+            }
+			
 			var random = new Random(100); 
 			var fileStorageService = _serviceRegistryFactory.CreateRest<IFileStorageRestService, FileStorageRestService>();
 			var exampleMessage = new ExampleMessage()
