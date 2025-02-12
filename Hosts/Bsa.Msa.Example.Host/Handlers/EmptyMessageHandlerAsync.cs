@@ -16,14 +16,11 @@ namespace Bsa.Msa.Example.Host.Handlers
     {
         private readonly IBusManager _busManager;
         private readonly ISettings _settings;
-        private readonly IServiceRegistryFactory _serviceRegistryFactory;
-        private IFileStorageRestService _proxy;
 
-        public EmptyMessageHandlerAsync(IBusManager busManager, ISettings settings, IServiceRegistryFactory serviceRegistryFactory)
+        public EmptyMessageHandlerAsync(IBusManager busManager, ISettings settings)
         {
             this._busManager = busManager;
             this._settings = settings;
-            _serviceRegistryFactory = serviceRegistryFactory;
         }
         public async Task HandleAsync(EmptyMessage message)
         {

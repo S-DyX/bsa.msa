@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Platforms>AnyCPU;x64</Platforms>
     <Description>Micro service architecture using the rabbitmq message broker.</Description>
     <Copyright>Stanislav Batyrgareev</Copyright>
@@ -10,9 +10,26 @@
     <RepositoryUrl>https://github.com/S-DyX/bsa.msa</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
     <PackageTags>MSA Rabbit MQ RabbiMQ RMQ Queue Message Bsa</PackageTags>
-    <PackageReleaseNotes>added autoDelete settings to config</PackageReleaseNotes>
+    <PackageReleaseNotes>Added async message handler
+ public sealed class EmptyMessageHandlerAsync : IMessageHandlerAsync&lt;EmptyMessage&gt;
+ {
+     private readonly IBusManager _busManager;
+     private readonly ISettings _settings;
+
+     public EmptyMessageHandlerAsync(IBusManager busManager, ISettings settings)
+     {
+         this._busManager = busManager;
+         this._settings = settings;
+     }
+     public async Task HandleAsync(EmptyMessage message)
+     {
+         Console.Write($"Processed: {JsonConvert.SerializeObject(message)}");
+         await Task.Delay(1000);
+
+     }
+ }</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>7.0.20</Version>
+    <Version>9.0.21</Version>
     <AssemblyVersion></AssemblyVersion>
     <FileVersion></FileVersion>
     <Authors>Stanislav Batyrgareev</Authors>
@@ -20,7 +37,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.2" />
     <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
   </ItemGroup>
 </Project>
