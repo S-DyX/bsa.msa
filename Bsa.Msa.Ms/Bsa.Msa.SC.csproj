@@ -1,0 +1,62 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Platforms>AnyCPU;x64</Platforms>
+    <Description>integrating Autofac with MSA Bsa.Msa.RabbitMq.Core
+http://bsasearch.org/msa.html</Description>
+    <PackageLicenseExpression>BSD-2-Clause</PackageLicenseExpression>
+    <RepositoryType>Git</RepositoryType>
+    <Copyright>Stanislav Batyrgareev</Copyright>
+    <RepositoryUrl>https://bitbucket.org/SBatyrgareev/bsa.msa/src</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/S-DyX/bsa.msa</PackageProjectUrl>
+    <PackageTags>MSA Rabbit MQ RabbiMQ RMQ Bsa.Msa.RabbitMq.Core Bsa</PackageTags>
+    <PackageReleaseNotes>private static void ConfigureServices(IServiceCollection services)
+{
+    services.InstallServices();
+    services.AddHostedService&lt;ServiceHost&gt;();
+    services.AddHttpClient();
+}
+
+public sealed class ServiceHost : IHostedService, IDisposable
+{
+ private readonly IServiceUnitManager _serviceUnitManager;
+
+ public ServiceHost(IServiceUnitManager serviceUnitManager)
+ {
+  this._serviceUnitManager = serviceUnitManager;
+ }
+
+ public Task StartAsync(CancellationToken cancellationToken)
+ {
+  //serviceProvider.InstallHandlers();
+  _serviceUnitManager.Start();
+  
+  return Task.CompletedTask;
+ }
+
+ public Task StopAsync(CancellationToken cancellationToken)
+ {
+  _serviceUnitManager.Stop();
+  return Task.CompletedTask;
+ }
+
+ public void Dispose()
+ {
+  _serviceUnitManager?.Stop();
+ }
+}</PackageReleaseNotes>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <Version>9.0.20</Version>
+    <AssemblyVersion></AssemblyVersion>
+    <Authors>Stanislav Batyrgareev</Authors>
+    <FileVersion></FileVersion>
+    <UserSecretsId>296ee702-81ce-4c22-9442-6b72b65466bd</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="9.0.20" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.2" />
+  </ItemGroup>
+
+</Project>
