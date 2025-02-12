@@ -25,21 +25,21 @@ namespace Bsa.Msa.Common.Services.Impl
 		private readonly InternalBus _internalBus;
 
 		public ServiceUnitManager(IServicesSettings servicesSection,
-			ILocalLogger localLogger,
+
 			ICommandFactory commandFactory,
 			IRepeaterFactory repeaterFactory,
 			ISubscriberFactory subscriberFactory,
 			IMessageHandlerFactory messageHandlerFactory)
-		: this(servicesSection, localLogger, commandFactory, repeaterFactory, subscriberFactory, messageHandlerFactory, null)
+		: this(servicesSection, commandFactory, repeaterFactory, subscriberFactory, messageHandlerFactory, null, null)
 		{
 		}
 		public ServiceUnitManager(IServicesSettings servicesSection,
-			ILocalLogger localLogger,
 			ICommandFactory commandFactory,
 			IRepeaterFactory repeaterFactory,
 			ISubscriberFactory subscriberFactory,
 			IMessageHandlerFactory messageHandlerFactory,
-			ISerializeService serializeService)
+			ISerializeService serializeService,
+			ILocalLogger localLogger)
 		{
 			if (servicesSection == null) throw new ArgumentNullException("servicesSection");
 

@@ -48,7 +48,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 				catch (Exception ex)
 				{
-					_localLogger.Error(ex.Message, ex);
+					_localLogger?.Error(ex.Message, ex);
 				}
 				finally
 				{

@@ -312,7 +312,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			}
 			catch (Exception e)
 			{
-				_logger.Error(e.Message, e);
+				_logger?.Error(e.Message, e);
 			}
 		}
 
@@ -329,10 +329,10 @@ namespace Bsa.Msa.RabbitMq.Core
 					headers = item.Headers;
 					message = _serializeService.Deserialize<TMessage>(item.Body);
 				}
-				_logger.Debug($"Invoke task messageId:{item.Id}");
+				_logger?.Debug($"Invoke task messageId:{item.Id}");
 				action.Invoke(message);
 				_internalBus.Ack(item.Id);
-				_logger.Debug($"Ack messageId:{item.Id}");
+				_logger?.Debug($"Ack messageId:{item.Id}");
 			}
 			catch (Exception exception)
 			{
@@ -386,7 +386,7 @@ namespace Bsa.Msa.RabbitMq.Core
 					while (tasks.Count >= _messageHandlerSettings.DegreeOfParallelism)
 					{
 						Thread.Sleep(0);
-						_logger.Debug($"To many threads Sleep {_queueName};{tasks.Count}>{_messageHandlerSettings.DegreeOfParallelism}");
+						_logger?.Debug($"To many threads Sleep {_queueName};{tasks.Count}>{_messageHandlerSettings.DegreeOfParallelism}");
 						tasks = _tasks.Where(x => x.IsActive).ToList();
 					}
 					var body = e.Body;
