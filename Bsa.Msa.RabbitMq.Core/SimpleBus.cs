@@ -164,7 +164,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 			Action<Func<IModel>> action = getModel =>
 			{
-				var exchangeName = SimpleBusExtension.GetExchangeName<TMessage>();
+				var exchangeName = _busNaming.GetExchangeName<TMessage>();
 				getModel().ExchangeDeclare(exchangeName, type, true);
 				getModel().QueueDeclare(queueName, true, false, _messageHandlerSettings.AutoDelete, dictionary);
 				getModel().QueueBind(queueName, exchangeName, routingKey ?? String.Empty);
@@ -185,7 +185,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		public void Delete<TMessage>() where TMessage : class
 		{
-			var exchangeName = SimpleBusExtension.GetExchangeName<TMessage>();
+			var exchangeName = _busNaming.GetExchangeName<TMessage>();
 			_simpleConnection.Configure(exchangeName, getChannel =>
 			{
 				getChannel().ExchangeDelete(exchangeName, true);
@@ -592,7 +592,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		public void Send<TMessage>(TMessage message) where TMessage : class
 		{
-			var queueName = SimpleBusExtension.GetQueueName<TMessage>();
+			var queueName = _busNaming.GetQueueName<TMessage>();
 			Send(queueName, message);
 
 		}
@@ -628,7 +628,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			if (!string.IsNullOrEmpty(routingKey))
 				type = topic;
 
-			exchangeName = exchangeName ?? SimpleBusExtension.GetExchangeName<TMessage>();
+			exchangeName = exchangeName ?? _busNaming.GetExchangeName<TMessage>();
 			_simpleConnection.Configure(exchangeName, getChannel =>
 			{
 
@@ -648,7 +648,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		public void Delete<TMessage>(string queue) where TMessage : class
 		{
-			var exchangeName = SimpleBusExtension.GetExchangeName<TMessage>();
+			var exchangeName = _busNaming.GetExchangeName<TMessage>();
 			_simpleConnection.Configure(exchangeName, getChannel =>
 			{
 				getChannel().ExchangeDelete(exchangeName, true);
@@ -726,7 +726,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		private string GetQueue<TRequest>() where TRequest : class
 		{
-			return _messageHandlerSettings != null ? _messageHandlerSettings.SubscriptionEndpoint ?? SimpleBusExtension.GetQueueName<TRequest>() : SimpleBusExtension.GetQueueName<TRequest>();
+			return _messageHandlerSettings != null ? _messageHandlerSettings.SubscriptionEndpoint ?? _busNaming.GetQueueName<TRequest>() : _busNaming.GetQueueName<TRequest>();
 		}
 
 		private void DeliverMessage<TResponse>(TResponse resp, BasicDeliverEventArgs ea) where TResponse : class
