@@ -35,12 +35,15 @@ namespace Bsa.Msa.RabbitMq.Core
 			_serializeService = serializeService ?? new SerializeService();
 			_internalBus = InternalBus.Create(_serializeService, logger);
 		}
-		public SimpleBus(ISimpleConnection simpleConnection, ILocalLogger logger)
-			: this(simpleConnection, logger, null, null)
+		public SimpleBus(ISimpleConnection simpleConnection, ILocalLogger logger, ISimpleBusNaming busNaming)
+			: this(simpleConnection, logger, null, busNaming)
 		{
 		}
-
-		public SimpleBus(ISimpleConnection simpleConnection)
+        public SimpleBus(ISimpleConnection simpleConnection, ISimpleBusNaming busNaming)
+            : this(simpleConnection, null, null, busNaming)
+        {
+        }
+        public SimpleBus(ISimpleConnection simpleConnection)
 		 : this(simpleConnection, null, null, null)
 		{
 		}

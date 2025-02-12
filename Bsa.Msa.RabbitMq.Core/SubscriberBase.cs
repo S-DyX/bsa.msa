@@ -103,13 +103,13 @@ namespace Bsa.Msa.RabbitMq.Core
 				if (_messageHandlerSettings.UseExchange)
 				{
 					_simpleBus.SubscribeExchange<TMessage>(subscriptionEndpoint,
-						message => _messageHandlerAsync.HandleAsync(message).ConfigureAwait(false), _messageHandlerSettings);
+						message => _messageHandlerAsync.HandleAsync(message).Wait(), _messageHandlerSettings);
 				}
 				else
 				{
 					_localBus.Register(_messageHandlerSettings);
 					_simpleBus.Subscribe<TMessage>(subscriptionEndpoint,
-						message => _messageHandlerAsync.HandleAsync(message).ConfigureAwait(false), _messageHandlerSettings);
+						message => _messageHandlerAsync.HandleAsync(message).Wait(), _messageHandlerSettings);
 				}
 			}
 			else
