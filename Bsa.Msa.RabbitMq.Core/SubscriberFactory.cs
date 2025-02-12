@@ -37,7 +37,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 			var simpleConnection = new SimpleConnection(_settings, _localLogger);
 			var simpleBus = new SimpleBus(simpleConnection, _localLogger, _serializeService, _busNaming);
-			return Activator.CreateInstance(constructedClass, messageHandlerSettings, messageHandlerFactory, _localLogger, simpleBus, _localBus) as ISubscriber;
+			return Activator.CreateInstance(constructedClass, messageHandlerSettings, messageHandlerFactory, _localLogger, simpleBus, _localBus, _busNaming) as ISubscriber;
 		}
 	}
 }
