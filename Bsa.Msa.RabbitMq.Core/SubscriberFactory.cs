@@ -10,18 +10,22 @@ namespace Bsa.Msa.RabbitMq.Core
 	public sealed class SubscriberFactory : ISubscriberFactory
 	{
 		private readonly ILocalLogger _localLogger;
+		private readonly ISimpleBusNaming _busNaming;
 		private readonly IRabbitMqSettings _settings;
 		private readonly ILocalBus _localBus;
 		private readonly IHandlerRegistry _subscriptionRegistry;
 		private readonly ISerializeService _serializeService;
 
-		public SubscriberFactory(IRabbitMqSettings settings, ILocalBus localBus, IHandlerRegistry subscriptionRegistry, ISerializeService serializeService = null, ILocalLogger localLogger = null)
+		public SubscriberFactory(IRabbitMqSettings settings, ILocalBus localBus, IHandlerRegistry subscriptionRegistry,
+			ISerializeService serializeService = null, ILocalLogger localLogger = null, ISimpleBusNaming busNaming = null)
 		{
 			this._localLogger = localLogger;
+			_busNaming = busNaming ?? new DefaultSimpleBusNaming();
 			_settings = settings;
 			_localBus = localBus;
 			this._subscriptionRegistry = subscriptionRegistry;
 			_serializeService = serializeService ?? new SerializeService();
+
 		}
 		public ISubscriber Create(string name, IMessageHandlerSettings messageHandlerSettings, IMessageHandlerFactory messageHandlerFactory)
 		{
@@ -32,7 +36,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			Type constructedClass = genericType.MakeGenericType(type);
 
 			var simpleConnection = new SimpleConnection(_settings, _localLogger);
-			var simpleBus = new SimpleBus(simpleConnection, _localLogger, _serializeService);
+			var simpleBus = new SimpleBus(simpleConnection, _localLogger, _serializeService, _busNaming);
 			return Activator.CreateInstance(constructedClass, messageHandlerSettings, messageHandlerFactory, _localLogger, simpleBus, _localBus) as ISubscriber;
 		}
 	}

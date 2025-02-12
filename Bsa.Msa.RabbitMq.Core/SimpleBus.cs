@@ -21,25 +21,27 @@ namespace Bsa.Msa.RabbitMq.Core
 	{
 		private readonly ISimpleConnection _simpleConnection;
 		private readonly ILocalLogger _logger;
+		private readonly ISimpleBusNaming _busNaming;
 		private readonly ISerializeService _serializeService;
 		private readonly InternalBus _internalBus;
 
 		private int _treadCount = 0;
 		private readonly object _lock = new object();
-		public SimpleBus(ISimpleConnection simpleConnection, ILocalLogger logger, ISerializeService serializeService)
+		public SimpleBus(ISimpleConnection simpleConnection, ILocalLogger logger, ISerializeService serializeService, ISimpleBusNaming busNaming)
 		{
 			_simpleConnection = simpleConnection;
 			_logger = logger;
+			_busNaming = busNaming ?? new DefaultSimpleBusNaming();
 			_serializeService = serializeService ?? new SerializeService();
 			_internalBus = InternalBus.Create(_serializeService, logger);
 		}
 		public SimpleBus(ISimpleConnection simpleConnection, ILocalLogger logger)
-			: this(simpleConnection, logger, null)
+			: this(simpleConnection, logger, null, null)
 		{
 		}
 
 		public SimpleBus(ISimpleConnection simpleConnection)
-		 : this(simpleConnection, null, null)
+		 : this(simpleConnection, null, null, null)
 		{
 		}
 
