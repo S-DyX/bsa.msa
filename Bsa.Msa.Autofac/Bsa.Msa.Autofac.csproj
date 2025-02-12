@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <Platforms>AnyCPU;x64</Platforms>
     <Description>integrating Autofac with MSA Bsa.Msa.RabbitMq.Core
 http://bsasearch.org/msa.html</Description>
@@ -38,9 +38,12 @@ http://bsasearch.org/msa.html</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.2.0" />
-    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="7.0.21" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Bsa.Msa.RabbitMq.Core\Bsa.Msa.RabbitMq.Core.csproj" />
   </ItemGroup>
 
 </Project>

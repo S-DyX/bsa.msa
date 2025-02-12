@@ -67,9 +67,9 @@ namespace Bsa.Msa.Common.Services.Impl
 
 		public void Start()
 		{
-			_logger.Info($"Start load local bus");
+			_logger?.Info($"Start load local bus");
 			_internalBus.Load();
-			_logger.Info($"End load local bus");
+			_logger?.Info($"End load local bus");
 			foreach (var service in _servicesSection.GetServices())
 			{
 				var handlers = service.GetHandlers();
@@ -109,7 +109,7 @@ namespace Bsa.Msa.Common.Services.Impl
 				_subscribers.Add(sub);
 
 			}
-			_logger.Info($"Created: Subscriber:{handler.Type}, Count:{handler.DegreeOfParallelism}");
+			_logger?.Info($"Created: Subscriber:{handler.Type}, Count:{handler.DegreeOfParallelism}");
 		}
 		private void CreateNew(MessageHandlerSettings handler)
 		{
@@ -124,7 +124,7 @@ namespace Bsa.Msa.Common.Services.Impl
 				}
 			}
 
-			_logger.Info($"Created: Subscriber:{handler.Type}, Count:{handler.DegreeOfParallelism}");
+			_logger?.Info($"Created: Subscriber:{handler.Type}, Count:{handler.DegreeOfParallelism}");
 		}
 		public void Stop()
 		{
@@ -156,7 +156,7 @@ namespace Bsa.Msa.Common.Services.Impl
 		private void HandleServiceUnitError(object sender, UnhandledExceptionEventArgs e)
 		{
 			var ex = (Exception)e.ExceptionObject;
-			_logger.Error(ex.InnerException?.Message ?? ex.Message, ex);
+			_logger?.Error(ex.InnerException?.Message ?? ex.Message, ex);
 			OnError?.Invoke(sender, e);
 		}
 
