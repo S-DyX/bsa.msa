@@ -48,7 +48,7 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 			Retry = GetAttBoolValue(raw, "retry", false);
 			ClearAfterStart=GetAttBoolValue(raw, "clearAfterStart", false);
 			AutoDelete = GetAttBoolValue(raw, "autoDelete", false);
-			AutoDelete = GetAttBoolValue(raw, "appendGuid", false);
+			AppendGuid = GetAttBoolValue(raw, "appendGuid", false);
 			RetryCount = GetAttIntValue(raw, "retryCount");
 			SubscriptionEndpoint = GetAttValue(raw, "subscriptionEndpoint");
 			UseExchange = GetAttBoolValue(raw, "useExchange", false);
@@ -56,9 +56,10 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 			DegreeOfParallelism = GetAttIntValue(raw, "degreeOfParallelism", 1);
 			//Postfix = raw.GetRecursionAttribute("postfix");
 			Postfix = GetAttValue(raw, "postfix");
-			Ttl = GetAttIntValue(raw, "ttl");
+			Ttl = GetAttIntValue(raw, "ttl")?? GetAttIntValue(raw, "Ttl");
+            TurnOffInternalQueue = GetAttBoolValue(raw, "turnOffInternalQueue", false);
 
-			if (!string.IsNullOrWhiteSpace(SubscriptionEndpoint) && !string.IsNullOrEmpty(Postfix))
+            if (!string.IsNullOrWhiteSpace(SubscriptionEndpoint) && !string.IsNullOrEmpty(Postfix))
 			{
 				SetSubscriptionEndpoint($"{SubscriptionEndpoint}.{Postfix}");
 			}
@@ -131,7 +132,13 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 			protected set;
 		}
 
-		public string Postfix
+        public bool TurnOffInternalQueue
+        {
+            get;
+            protected set;
+        }
+
+        public string Postfix
 		{
 			get;
 			set;

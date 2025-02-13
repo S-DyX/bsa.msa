@@ -9,7 +9,7 @@ using Bsa.Msa.RabbitMq.Core.Interfaces;
 using Bsa.Msa.RabbitMq.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bsa.Msa.SC
+namespace Bsa.Msa.DependencyInjection
 {
 	public static class ContainerInstaller
 	{
@@ -17,13 +17,13 @@ namespace Bsa.Msa.SC
         {
             InstallRabbit(builder);
             InstallHandlers(builder);
-            builder.AddSingleton<ILocalContainer, LocalContainer>();
+            
 
 
         }
         public static void InstallHandlers(this IServiceCollection services)
 		{
-			services.AddSingleton<ILocalContainer, LocalContainer>();
+            services.AddSingleton<ILocalContainer, LocalContainer>();
 			services.AddSingleton<IHandlerRegistry, HandlerRegistry>();
 			services.AddSingleton<ICommandRegistry, CommandRegistry>();
 			services.AddSingleton<IServiceUnitManager, ServiceUnitManager>();

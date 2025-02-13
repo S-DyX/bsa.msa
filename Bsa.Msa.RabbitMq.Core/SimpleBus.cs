@@ -39,11 +39,11 @@ namespace Bsa.Msa.RabbitMq.Core
 			: this(simpleConnection, logger, null, busNaming)
 		{
 		}
-        public SimpleBus(ISimpleConnection simpleConnection, ISimpleBusNaming busNaming)
-            : this(simpleConnection, null, null, busNaming)
-        {
-        }
-        public SimpleBus(ISimpleConnection simpleConnection)
+		public SimpleBus(ISimpleConnection simpleConnection, ISimpleBusNaming busNaming)
+			: this(simpleConnection, null, null, busNaming)
+		{
+		}
+		public SimpleBus(ISimpleConnection simpleConnection)
 		 : this(simpleConnection, null, null, null)
 		{
 		}
@@ -269,7 +269,8 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			//if (!TryGet(queueName, getChannel, configure, out e, ref _consumer))
 			//	return null;
-			ProcessFromLocalBus(queueName, action, getChannel);
+			if (!_messageHandlerSettings.TurnOffInternalQueue)
+				ProcessFromLocalBus(queueName, action, getChannel);
 			if (_tasks.Count < _messageHandlerSettings.DegreeOfParallelism)
 				_tasks.Add(new AsyncWorker(_logger, _queue));
 
@@ -279,8 +280,12 @@ namespace Bsa.Msa.RabbitMq.Core
 				_consumer = new EventingBasicConsumer(getChannel.Invoke());
 				getChannel().BasicConsume(queueName, false, _consumer);
 
-
-				_consumer.Received += consumerOnReceived(queueName, action, getChannel);
+				if (!_messageHandlerSettings.TurnOffInternalQueue)
+					_consumer.Received += consumerOnReceived(queueName, action, getChannel);
+				else
+				{
+					_consumer.Received += consumerOnReceivedOnlyRmq(queueName, action, getChannel);
+				}
 			}
 		}
 
@@ -299,7 +304,7 @@ namespace Bsa.Msa.RabbitMq.Core
 							Increment();
 							try
 							{
-								ProcessMessage(queueName, action, getChannel, item, default(TMessage));
+								ProcessMessageInternalBus(queueName, action, getChannel, item, default(TMessage));
 							}
 							catch (Exception e)
 							{
@@ -322,7 +327,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		}
 
 		private static string _retrycount = "retryCount";
-		private byte[] ProcessMessage<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel, InternalBusItem item, TMessage message)
+		private byte[] ProcessMessageInternalBus<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel, InternalBusItem item, TMessage message)
 		{
 			byte[] messageArray = null;
 			IDictionary<string, object> headers = item.Headers;
@@ -410,7 +415,7 @@ namespace Bsa.Msa.RabbitMq.Core
 							Increment();
 							try
 							{
-								ProcessMessage(queueName, action, getChannel, item, message);
+								ProcessMessageInternalBus(queueName, action, getChannel, item, message);
 							}
 							catch (Exception e)
 							{
@@ -421,10 +426,31 @@ namespace Bsa.Msa.RabbitMq.Core
 								Decrement();
 							}
 						};
-
+						var tasksCount = _tasks.Count;
+						//Console.WriteLine($" asyncWorker:Count:{_queue.Count};Task:{tasksCount}");
 						_queue.Enqueue(a);
-						if (_tasks.Count < _messageHandlerSettings.DegreeOfParallelism)
+						var freeList = _tasks.Where(x => x.CanFree).ToList();
+						var times = tasksCount<<2;
+						if (!freeList.FastAny() 
+						    && times < _queue.Count
+						    && tasksCount < _messageHandlerSettings.DegreeOfParallelism)
 							_tasks.Add(new AsyncWorker(_logger, _queue));
+						if (tasksCount > 1 && tasksCount> _queue.Count)
+						{
+							_logger?.Info(
+								$"Message Count:{_queue.Count};Thread Count:{_tasks.Count}");
+							foreach (var asyncWorker in freeList)
+							{
+								//_logger?.Warn(
+								//	$"free asyncWorker:Count:{_queue.Count};Task:{_tasks.Count};Free:{freeList.Count}");
+								
+								if (asyncWorker.CanFree)
+								{
+									asyncWorker.Dispose();
+									_tasks.Remove(asyncWorker);
+								}
+							}
+						}
 					}
 					catch (JsonException jre)
 					{
@@ -434,45 +460,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 					catch (Exception ex)
 					{
-						if (ex is AggregateException)
-						{
-							foreach (var innerException in ((AggregateException)ex).Flatten().InnerExceptions)
-							{
-								_logger?.Error($"Error queueName={queueName}: {innerException.Message};{System.Environment.NewLine}JSON:{messageAsString}", innerException);
-							}
-						}
-						else
-						{
-							_logger?.Error($"Error queueName={queueName}: {ex.Message};{System.Environment.NewLine}JSON:{messageAsString}", ex);
-						}
-						if (_messageHandlerSettings.Retry)
-						{
-							var retryCount = 0;
-							if (headers.ContainsKey(_retrycount))
-							{
-								var header = headers[_retrycount];
-								retryCount = int.Parse(header?.ToString());
-							}
-							if (_messageHandlerSettings.RetryCount.HasValue && _messageHandlerSettings.RetryCount.Value < retryCount)
-							{
-								_logger?.Error(
-									$"retry count exceeded {retryCount}>{_messageHandlerSettings.RetryCount.Value}. Error queueName={queueName}: {ex.Message}",
-									ex);
-								SendErrorMessage(getChannel(), queueName, messageAsString, ex);
-							}
-							else
-							{
-								retryCount++;
-								headers["retryCount"] = retryCount;
-								Send(getChannel(), queueName, messageAsString, headers);
-							}
-
-						}
-						else
-						{
-							SendErrorMessage(getChannel(), queueName, messageAsString, ex);
-						}
-
+						ProcessException<TMessage>(queueName, getChannel, ex, messageAsString, headers);
 					}
 				}
 				catch (System.TimeoutException te)
@@ -512,6 +500,132 @@ namespace Bsa.Msa.RabbitMq.Core
 
 				}
 			};
+		}
+
+		private void ProcessException<TMessage>(string queueName, Func<IModel> getChannel, Exception ex, string messageAsString,
+			IDictionary<string, object> headers)
+		{
+			if (ex is AggregateException)
+			{
+				foreach (var innerException in ((AggregateException)ex).Flatten().InnerExceptions)
+				{
+					_logger?.Error(
+						$"Error queueName={queueName}: {innerException.Message};{System.Environment.NewLine}JSON:{messageAsString}",
+						innerException);
+				}
+			}
+			else
+			{
+				_logger?.Error($"Error queueName={queueName}: {ex.Message};{System.Environment.NewLine}JSON:{messageAsString}",
+					ex);
+			}
+
+			if (_messageHandlerSettings.Retry)
+			{
+				var retryCount = 0;
+				if (headers.ContainsKey(_retrycount))
+				{
+					var header = headers[_retrycount];
+					retryCount = int.Parse(header?.ToString());
+				}
+
+				if (_messageHandlerSettings.RetryCount.HasValue && _messageHandlerSettings.RetryCount.Value < retryCount)
+				{
+					_logger?.Error(
+						$"retry count exceeded {retryCount}>{_messageHandlerSettings.RetryCount.Value}. Error queueName={queueName}: {ex.Message}",
+						ex);
+					SendErrorMessage(getChannel(), queueName, messageAsString, ex);
+				}
+				else
+				{
+					retryCount++;
+					headers["retryCount"] = retryCount;
+					Send(getChannel(), queueName, messageAsString, headers);
+				}
+			}
+			else
+			{
+				SendErrorMessage(getChannel(), queueName, messageAsString, ex);
+			}
+		}
+
+
+		private EventHandler<BasicDeliverEventArgs> consumerOnReceivedOnlyRmq<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel)
+		{
+			return (ch, e) =>
+			{
+				var tasks = _tasks.Where(x => x.IsActive).ToList();
+				while (tasks.Count >= _messageHandlerSettings.DegreeOfParallelism)
+				{
+					Thread.Sleep(0);
+					_logger?.Debug($"To many threads Sleep {_queueName};{tasks.Count}>{_messageHandlerSettings.DegreeOfParallelism}");
+					tasks = _tasks.Where(x => x.IsActive).ToList();
+				}
+				Task.Factory.StartNew(() => ProcessSingleRmqMessage(queueName, action, getChannel, e));
+				;
+			};
+		}
+
+		private void ProcessSingleRmqMessage<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel, BasicDeliverEventArgs e)
+		{
+			ulong? deliveryTag = null;
+			try
+			{
+				var body = e.Body;
+				var properties = e.BasicProperties;
+				var headers = properties.Headers ?? new Dictionary<string, object>();
+				var messageAsString = Encoding.UTF8.GetString(body.ToArray());
+				try
+				{
+					TMessage message = _serializeService.Deserialize<TMessage>(messageAsString);
+					action.Invoke(message);
+				}
+				catch (JsonException jre)
+				{
+					deliveryTag = e.DeliveryTag;
+					_logger?.Error($"{messageAsString};{jre.Message};{System.Environment.NewLine}JSON:{messageAsString}", jre);
+				}
+
+				catch (Exception ex)
+				{
+					ProcessException<TMessage>(queueName, getChannel, ex, messageAsString, headers);
+				}
+			}
+			catch (System.TimeoutException te)
+			{
+				_logger?.Error(te.Message, te);
+				_consumer.Received -= consumerOnReceivedOnlyRmq(queueName, action, getChannel);
+				_consumer = null;
+				throw;
+			}
+			catch (System.IO.EndOfStreamException endOfStreamException)
+			{
+				_logger?.Error(endOfStreamException.Message, endOfStreamException);
+				_consumer.Received -= consumerOnReceivedOnlyRmq(queueName, action, getChannel);
+				_consumer = null;
+				throw;
+			}
+			catch (OperationInterruptedException ex)
+			{
+				_logger?.Error(ex.Message, ex);
+				Task.Delay(500);
+			}
+			catch (Exception ex)
+			{
+				_logger?.Error(ex.Message, ex);
+			}
+			finally
+			{
+				if (deliveryTag.HasValue)
+				{
+					var channel = getChannel();
+					channel.BasicReject(deliveryTag.Value, true);
+				}
+				else
+				{
+					getChannel().BasicAck(e.DeliveryTag, false);
+				}
+			}
 		}
 
 		private void SendErrorMessage(IModel channel, string queueName, byte[] body, Exception ex)

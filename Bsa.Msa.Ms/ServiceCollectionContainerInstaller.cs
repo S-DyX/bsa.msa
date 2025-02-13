@@ -9,7 +9,7 @@ using Bsa.Msa.RabbitMq.Core.Interfaces;
 using Bsa.Msa.RabbitMq.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bsa.Msa.SC
+namespace Bsa.Msa.DependencyInjection
 {
 	public static class ServiceCollectionContainerInstaller
 	{

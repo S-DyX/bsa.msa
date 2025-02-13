@@ -9,11 +9,14 @@ namespace Bsa.Msa.RabbitMq.Core
 	{
 		private readonly ILocalLogger _localLogger;
 		private readonly ConcurrentQueue<Action> _queue;
-		private readonly Thread _thread;
+		private Thread _thread;
 		private bool _isRun;
 		private bool _isActive;
+		private DateTime _lastAction;
+		public DateTime LastAction => _lastAction;
 		public AsyncWorker(ILocalLogger localLogger, ConcurrentQueue<Action> queue)
 		{
+			_lastAction = DateTime.UtcNow;
 			_localLogger = localLogger;
 			_queue = queue;
 			_isRun = true;
@@ -22,6 +25,8 @@ namespace Bsa.Msa.RabbitMq.Core
 		}
 		public bool IsActive => _isActive;
 		private int _sleepTimes = 0;
+
+		public bool CanFree => !_isActive && _lastAction < DateTime.UtcNow.AddSeconds(-5);
 		private void Process()
 		{
 			while (_isRun)
@@ -34,7 +39,9 @@ namespace Bsa.Msa.RabbitMq.Core
 						_isActive = true;
 						if (action != null)
 						{
+							_lastAction = DateTime.UtcNow;
 							action.Invoke();
+							_lastAction = DateTime.UtcNow;
 						}
 					}
 					else
@@ -60,6 +67,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		public void Dispose()
 		{
 			_isRun = false;
+			_thread = null;
 			//_thread.Abort();
 		}
 	}

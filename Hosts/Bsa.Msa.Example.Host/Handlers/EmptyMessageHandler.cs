@@ -34,7 +34,7 @@ namespace Bsa.Msa.Example.Host.Handlers
 		}
 		public void Handle(EmptyMessage message)
 		{
-			Console.Write($"Processed: {JsonConvert.SerializeObject(message)}");
+			Console.WriteLine($"{DateTime.UtcNow} Thread:{Thread.CurrentThread.ManagedThreadId} Processed: {JsonConvert.SerializeObject(message)}");
 			Thread.Sleep(300);
 
 		}

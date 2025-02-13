@@ -5,6 +5,7 @@ using FileStorage.Contracts.Rest.Impl.FileStorage;
 using Newtonsoft.Json;
 using Service.Registry.Common;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Bsa.Msa.Example.Host.Handlers
@@ -24,7 +25,7 @@ namespace Bsa.Msa.Example.Host.Handlers
         }
         public async Task HandleAsync(EmptyMessage message)
         {
-            Console.Write($"Processed: {JsonConvert.SerializeObject(message)}");
+            Console.WriteLine($"{DateTime.UtcNow} Thread:{Thread.CurrentThread.ManagedThreadId} Processed: {JsonConvert.SerializeObject(message)}");
             await Task.Delay(1000);
 
         }

@@ -13,7 +13,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Bsa.Msa.Autofac", "Bsa.Msa.
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{00E98219-EABA-44ED-B19E-621A502FB979}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bsa.Msa.SC", "Bsa.Msa.Ms\Bsa.Msa.SC.csproj", "{D9210235-0BF3-450B-BFA1-F36AF3A4CB50}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Bsa.Msa.DependencyInjection", "Bsa.Msa.Ms\Bsa.Msa.DependencyInjection.csproj", "{D9210235-0BF3-450B-BFA1-F36AF3A4CB50}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

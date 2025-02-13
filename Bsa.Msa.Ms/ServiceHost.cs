@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Bsa.Msa.Common.Services.Interfaces;
 using Microsoft.Extensions.Hosting;
 
-namespace Bsa.Msa.SC
+namespace Bsa.Msa.DependencyInjection
 {
 	/// <summary>
 	/// <see cref="IHostedService"/>

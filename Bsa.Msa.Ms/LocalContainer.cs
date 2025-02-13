@@ -1,7 +1,7 @@
 ﻿using System;
 using Bsa.Msa.Common.Services.Interfaces;
 
-namespace Bsa.Msa.SC
+namespace Bsa.Msa.DependencyInjection
 {
 	public sealed class LocalContainer : ILocalContainer
 	{

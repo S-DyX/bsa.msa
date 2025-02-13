@@ -24,7 +24,9 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 		void SetSubscriptionEndpoint(string subscriptionEndpoint);
 
 		int? Ttl { get; }
-
+		/// <summary>
+		/// Purge queue after start
+		/// </summary>
 		bool ClearAfterStart { get; }
 		bool AutoDelete { get; }
 		/// <summary>
@@ -32,7 +34,9 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 		/// </summary>
 		bool AppendGuid { get; }
 
+        bool TurnOffInternalQueue { get; }
 
-	}
+
+    }
 
 }
