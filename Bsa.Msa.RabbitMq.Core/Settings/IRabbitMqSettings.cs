@@ -9,13 +9,6 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 		string Password { get; }
 		string Host { get; }
 		string VirtualHost { get; }
-		int Port { get; }
-
-		int PrefetchCount { get; }
-
-		int Timeout { get; }
-
-		string ConnectionString { get; }
 		
 	}
 }

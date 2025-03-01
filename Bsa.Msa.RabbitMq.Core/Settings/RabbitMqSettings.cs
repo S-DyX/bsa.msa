@@ -19,15 +19,15 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
         }
         public RabbitMqSettings()
         {
-	        try
-	        {
+            try
+            {
 
-		        LoadSettings(GetElement());
-			}
-	        catch (Exception e)
-	        {
-		        throw new InvalidOperationException("section not found or has bad format in appsettings.json  \"rabbitMq\": {\r\n    \"host\": \"localhost\",\r\n    \"username\": \"guest\",\r\n    \"password\": \"guest\",\r\n    //\"virtualHost\": \"virtual\",\r\n    \"timeout\": 10\r\n  }");
-	        }
+                LoadSettings(GetElement());
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("section not found or has bad format in appsettings.json  \"rabbitMq\": {\r\n    \"host\": \"localhost\",\r\n    \"username\": \"guest\",\r\n    \"password\": \"guest\",\r\n    //\"virtualHost\": \"virtual\",\r\n    \"timeout\": 10\r\n  }");
+            }
             Port = 5672;
         }
         private Random _rnd = new Random(2);
@@ -52,6 +52,8 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 
         public RabbitMqSettings(string connectionString)
         {
+            Port = 5672;
+            Hosts = new List<string>();
             var values = connectionString.Split(';');
             foreach (var v in values)
             {
