@@ -50,11 +50,20 @@ namespace Bsa.Msa.Common.Repeaters
 				throw new InvalidOperationException("The repeater is already started.");
 
 			this._repeatAction = onRepeat;
-			var diff = DateTime.Now.Date - _dueTime - DateTime.Now;
-			if (diff.TotalMilliseconds <= 0)
-				diff = new TimeSpan(0);
+			var startDelay = _dueTime;
+			if (_dueTime.TotalMilliseconds > 0)
+			{
+				startDelay = DateTime.Now -DateTime.Now.Date - _dueTime;
+				if (startDelay.TotalMilliseconds <= 0)
+					startDelay = -startDelay; 
+				else
+				{
+					startDelay = new TimeSpan(0, 24, 0, 0) - startDelay;
+				}
+			}
 
-			_timer = new Timer(HandleTimerCallback, null, diff, _period);
+
+			_timer = new Timer(HandleTimerCallback, null, startDelay, _period);
 
 			_isStarted = true;
 		}
