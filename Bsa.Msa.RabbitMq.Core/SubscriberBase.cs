@@ -23,7 +23,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		private IDisposable _subscribers;
 		private Thread _task;
-
+		private bool _isInit = false;
 		public SubscriberBase(IMessageHandlerSettings messageHandlerSettings,
 			IMessageHandlerFactory factory,
 			ILocalLogger logger,
@@ -47,25 +47,27 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		public void Start()
 		{
-			var isInit = false;
-			while (!isInit)
+			_isInit = false;
+			while (!_isInit)
 			{
 				try
 				{
 					Init();
-					isInit = true;
+					_isInit = true;
 				}
 				catch (System.IO.EndOfStreamException endOfStreamException)
 				{
+					Thread.Sleep(200);
 					_simpleBus.Reconnect();
 					_logger?.Error($"EndOfStreamException subscription: {_messageHandlerSettings.Type}", endOfStreamException);
 				}
 				catch (Exception ex)
 				{
+					Thread.Sleep(200);
 					_logger?.Error($"Cannot start subscription: {_messageHandlerSettings.Type}", ex);
 					OnError?.Invoke(this, new UnhandledExceptionEventArgs(ex, false));
 				}
-				Thread.Sleep(200);
+
 			}
 
 		}
@@ -131,6 +133,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		}
 
 		public event UnhandledExceptionEventHandler OnError;
+		public bool IsStarted => _isInit;
 
 
 		public void StartAsync()

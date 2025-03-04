@@ -1,9 +1,8 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Bsa.Msa.Common.Services.Commands;
+﻿using Bsa.Msa.Common.Services.Commands;
 using Bsa.Msa.Common.Services.Interfaces;
 using Bsa.Msa.Common.Settings;
+using System;
+using System.Threading;
 
 namespace Bsa.Msa.Common.Repeaters
 {
@@ -31,19 +30,21 @@ namespace Bsa.Msa.Common.Repeaters
 			this._repeaterFactory = repeaterFactory;
 			this._commandFactory = commandFactory;
 		}
+		private bool _isStated = false;
 
 		/// <summary>
 		/// Starts the processing unit.
 		/// </summary>
 		public void Start()
 		{
-			_repeater = _repeaterFactory.Create(_settings.DueTime, _settings.Period, _settings.Mode);
+			_repeater = _repeaterFactory.Create(_settings);
 			_repeater.Error += HandleException;
 
 
-
+			_isStated = true;
 			_repeater.Start
 			(
+
 				cancellationToken =>
 				{
 					var settings = (ISettings)_settings;
@@ -55,6 +56,7 @@ namespace Bsa.Msa.Common.Repeaters
 
 		public void Stop()
 		{
+			_isStated = false;
 			if (_repeater != null)
 				_repeater.Dispose();
 
@@ -65,6 +67,7 @@ namespace Bsa.Msa.Common.Repeaters
 
 
 		public event UnhandledExceptionEventHandler OnError;
+		public bool IsStarted => _isStated;
 
 		private void HandleException(object sender, UnhandledExceptionEventArgs e)
 		{

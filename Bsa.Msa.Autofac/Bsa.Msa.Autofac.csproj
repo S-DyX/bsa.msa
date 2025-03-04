@@ -30,7 +30,7 @@ http://bsasearch.org/msa.html</Description>
      }
  }</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>6.0.34</Version>
+    <Version>6.0.36</Version>
     <AssemblyVersion></AssemblyVersion>
     <Authors>Stanislav Batyrgareev</Authors>
     <FileVersion></FileVersion>
@@ -39,8 +39,11 @@ http://bsasearch.org/msa.html</Description>
 
   <ItemGroup>
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="6.0.0" />
-    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="6.0.34" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Bsa.Msa.RabbitMq.Core\Bsa.Msa.RabbitMq.Core.csproj" />
   </ItemGroup>
 
 </Project>

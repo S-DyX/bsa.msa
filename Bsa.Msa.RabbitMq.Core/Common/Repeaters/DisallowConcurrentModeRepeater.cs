@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Bsa.Msa.Common.Services.Commands;
+using System;
 using System.Threading;
 
 namespace Bsa.Msa.Common.Repeaters
@@ -59,10 +60,10 @@ namespace Bsa.Msa.Common.Repeaters
 
 		private readonly CancellationTokenSource _cancellationTokenSource;
 
-		public DisallowConcurrentModeRepeater(TimeSpan dueTime, TimeSpan period)
+		public DisallowConcurrentModeRepeater(ICommandSettings commandSettings)
 		{
-			this._dueTime = dueTime;
-			this._period = period;
+			this._dueTime = commandSettings.DueTime;
+			this._period = commandSettings.Period;
 			this._cancellationTokenSource = new CancellationTokenSource();
 		}
 

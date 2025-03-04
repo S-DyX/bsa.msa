@@ -1,14 +1,14 @@
-﻿using System;
-using System.Threading.Tasks;
-using Bsa.Msa.Common.Services.Interfaces;
+﻿using Bsa.Msa.Common.Services.Interfaces;
 using Bsa.Msa.Common.Services.MessageHandling;
 using Bsa.Msa.RabbitMq.Core.Interfaces;
+using System;
+using System.Threading.Tasks;
 
 namespace Bsa.Msa.RabbitMq.Core
 {
-	public class RespondBase<TMessage, TResponse> : ISubscriber 
+	public class RespondBase<TMessage, TResponse> : ISubscriber
 		where TMessage : class, new()
-		where TResponse : class 
+		where TResponse : class
 	{
 		private IBusManager _busManager;
 		private IMessageHandlerSettings _messageHandlerSettings;
@@ -22,13 +22,13 @@ namespace Bsa.Msa.RabbitMq.Core
 			_busManager = busManager;
 			_factory = factory;
 			_messageHandlerSettings = messageHandlerSettings;
-			
+
 		}
 
 		public void Dispose()
 		{
 #warning Incorrect task working
-            _task = null;
+			_task = null;
 			_messageHandlerSettings = null;
 			_busManager = null;
 			_factory = null;
@@ -40,7 +40,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			try
 			{
-				_messageHandler = _factory.Create<TMessage,TResponse>(_messageHandlerSettings.Type, _messageHandlerSettings, null, null);
+				_messageHandler = _factory.Create<TMessage, TResponse>(_messageHandlerSettings.Type, _messageHandlerSettings, null, null);
 				//_busManager.Subscribe(bus=>bus.RespondAsync<TMessage, TResponse>(
 				//	request =>
 				//		Task.Factory.StartNew(() => _messageHandler.Handle(request))));
@@ -72,18 +72,19 @@ namespace Bsa.Msa.RabbitMq.Core
 				{
 					_busManager.Respond<TMessage, TResponse>(request => _messageHandler.Handle(request), _messageHandlerSettings.SubscriptionEndpoint);
 				}
-				else {
+				else
+				{
 #warning The 'then' statement is equivalent to the 'else' statement!
-                    _busManager.Respond<TMessage, TResponse>(request => _messageHandler.Handle(request), _messageHandlerSettings.SubscriptionEndpoint);
+					_busManager.Respond<TMessage, TResponse>(request => _messageHandler.Handle(request), _messageHandlerSettings.SubscriptionEndpoint);
 				}
-			
+
 			}
 			catch (Exception ex)
 			{
 				if (OnError != null)
 					OnError(this, new UnhandledExceptionEventArgs(ex, false));
 			}
-			
+
 		}
 
 		public void Stop()
@@ -92,8 +93,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		}
 
 		public event UnhandledExceptionEventHandler OnError;
-
-
+		public bool IsStarted => true;
 
 
 		public void StartAsync()

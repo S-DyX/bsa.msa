@@ -267,8 +267,6 @@ namespace Bsa.Msa.RabbitMq.Core
 		private int _iteration = 1;
 		private void QueueingBasicConsumer<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel, Action<Func<IModel>> configure)
 		{
-			//if (!TryGet(queueName, getChannel, configure, out e, ref _consumer))
-			//	return null;
 			if (!_messageHandlerSettings.TurnOffInternalQueue)
 				ProcessFromLocalBus(queueName, action, getChannel);
 			if (_tasks.Count < _messageHandlerSettings.DegreeOfParallelism)
@@ -279,13 +277,14 @@ namespace Bsa.Msa.RabbitMq.Core
 				configure.Invoke(getChannel);
 				_consumer = new EventingBasicConsumer(getChannel.Invoke());
 				getChannel().BasicConsume(queueName, false, _consumer);
-
+				_logger?.Info($"Start BasicConsume {_queueName};{_messageHandlerSettings.DegreeOfParallelism}");
 				if (!_messageHandlerSettings.TurnOffInternalQueue)
 					_consumer.Received += consumerOnReceived(queueName, action, getChannel);
 				else
 				{
 					_consumer.Received += consumerOnReceivedOnlyRmq(queueName, action, getChannel);
 				}
+				_logger?.Info($"End BasicConsume {_queueName};{_messageHandlerSettings.DegreeOfParallelism}");
 			}
 		}
 
@@ -430,12 +429,12 @@ namespace Bsa.Msa.RabbitMq.Core
 						//Console.WriteLine($" asyncWorker:Count:{_queue.Count};Task:{tasksCount}");
 						_queue.Enqueue(a);
 						var freeList = _tasks.Where(x => x.CanFree).ToList();
-						var times = tasksCount<<2;
-						if (!freeList.FastAny() 
-						    && times < _queue.Count
-						    && tasksCount < _messageHandlerSettings.DegreeOfParallelism)
+						var times = tasksCount << 2;
+						if (!freeList.FastAny()
+							&& times < _queue.Count
+							&& tasksCount < _messageHandlerSettings.DegreeOfParallelism)
 							_tasks.Add(new AsyncWorker(_logger, _queue));
-						if (tasksCount > 1 && tasksCount> _queue.Count)
+						if (tasksCount > 1 && tasksCount > _queue.Count)
 						{
 							_logger?.Info(
 								$"Message Count:{_queue.Count};Thread Count:{_tasks.Count}");
@@ -443,7 +442,7 @@ namespace Bsa.Msa.RabbitMq.Core
 							{
 								//_logger?.Warn(
 								//	$"free asyncWorker:Count:{_queue.Count};Task:{_tasks.Count};Free:{freeList.Count}");
-								
+
 								if (asyncWorker.CanFree)
 								{
 									asyncWorker.Dispose();
@@ -466,15 +465,13 @@ namespace Bsa.Msa.RabbitMq.Core
 				catch (System.TimeoutException te)
 				{
 					_logger?.Error(te.Message, te);
-					_consumer.Received -= consumerOnReceived(queueName, action, getChannel);
-					_consumer = null;
+					UnsubscribeFromQueue(queueName, action, getChannel);
 					throw;
 				}
 				catch (System.IO.EndOfStreamException endOfStreamException)
 				{
 					_logger?.Error(endOfStreamException.Message, endOfStreamException);
-					_consumer.Received -= consumerOnReceived(queueName, action, getChannel);
-					_consumer = null;
+					UnsubscribeFromQueue(queueName, action, getChannel);
 					throw;
 				}
 				catch (OperationInterruptedException ex)
@@ -500,6 +497,13 @@ namespace Bsa.Msa.RabbitMq.Core
 
 				}
 			};
+		}
+
+		private void UnsubscribeFromQueue<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel)
+		{
+			_logger?.Debug($"UnsubscribeFromQueue {_queueName};{_messageHandlerSettings.DegreeOfParallelism}");
+			//_consumer.Received -= consumerOnReceived(queueName, action, getChannel);
+			//_consumer = null;
 		}
 
 		private void ProcessException<TMessage>(string queueName, Func<IModel> getChannel, Exception ex, string messageAsString,

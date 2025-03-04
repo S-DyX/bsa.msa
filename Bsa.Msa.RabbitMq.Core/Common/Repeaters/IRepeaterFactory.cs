@@ -1,22 +1,23 @@
-﻿using System;
+﻿using Bsa.Msa.Common.Services.Commands;
+using System;
 
 namespace Bsa.Msa.Common.Repeaters
 {
 	public interface IRepeaterFactory
 	{
-		IRepeater Create(TimeSpan dueTime, TimeSpan period, RepeaterConcurrentMode mode = RepeaterConcurrentMode.DisallowConcurrentMode);
+		IRepeater Create(ICommandSettings commandSettings);
 	}
 
 	public sealed class RepeaterFactory : IRepeaterFactory
 	{
-		public IRepeater Create(TimeSpan dueTime, TimeSpan period, RepeaterConcurrentMode mode = RepeaterConcurrentMode.DisallowConcurrentMode)
+		public IRepeater Create(ICommandSettings commandSettings)
 		{
-			switch (mode)
+			switch (commandSettings.Mode)
 			{
 				case RepeaterConcurrentMode.DisallowConcurrentMode:
-					return new DisallowConcurrentModeRepeater(dueTime, period);
+					return new DisallowConcurrentModeRepeater(commandSettings);
 				default:
-					return new AllowConcurrenceModeRepeater(dueTime, period);
+					return new AllowConcurrenceModeRepeater(commandSettings);
 			}
 		}
 	}

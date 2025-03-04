@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Bsa.Msa.Common.Services.Commands;
+using System;
 using System.Threading;
 
 namespace Bsa.Msa.Common.Repeaters
@@ -32,10 +33,10 @@ namespace Bsa.Msa.Common.Repeaters
 		private bool _isStarted = false;
 
 		private Action<CancellationToken> _repeatAction;
-		public AllowConcurrenceModeRepeater(TimeSpan dueTime, TimeSpan period)
+		public AllowConcurrenceModeRepeater(ICommandSettings commandSettings)
 		{
-			this._dueTime = dueTime;
-			this._period = period;
+			this._dueTime = commandSettings.DueTime;
+			this._period = commandSettings.Period;
 
 			this._cancellationTokenSource = new CancellationTokenSource();
 		}
@@ -49,8 +50,11 @@ namespace Bsa.Msa.Common.Repeaters
 				throw new InvalidOperationException("The repeater is already started.");
 
 			this._repeatAction = onRepeat;
+			var diff = DateTime.Now.Date - _dueTime - DateTime.Now;
+			if (diff.TotalMilliseconds <= 0)
+				diff = new TimeSpan(0);
 
-			_timer = new Timer(HandleTimerCallback, null, _dueTime, _period);
+			_timer = new Timer(HandleTimerCallback, null, diff, _period);
 
 			_isStarted = true;
 		}

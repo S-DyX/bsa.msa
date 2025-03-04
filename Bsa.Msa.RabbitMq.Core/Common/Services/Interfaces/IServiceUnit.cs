@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 
 namespace Bsa.Msa.Common.Services.Interfaces
 {
@@ -12,5 +11,7 @@ namespace Bsa.Msa.Common.Services.Interfaces
 		void Stop();
 
 		event UnhandledExceptionEventHandler OnError;
+
+		bool IsStarted { get; }
 	}
 }

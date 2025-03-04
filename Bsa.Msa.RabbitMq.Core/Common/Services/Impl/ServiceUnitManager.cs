@@ -91,12 +91,14 @@ namespace Bsa.Msa.Common.Services.Impl
 			_serviceUnits.ForEach(x =>
 			{
 				x.StartAsync();
-				Thread.Sleep(100);
+				if (!x.IsStarted)
+					Thread.Sleep(100);
 			});
 			_subscribers.ForEach(x =>
 			{
 				x.StartAsync();
-				Thread.Sleep(200);
+				if (!x.IsStarted)
+					Thread.Sleep(200);
 			});
 		}
 
