@@ -22,6 +22,7 @@ namespace Bsa.Msa.Common.Repeaters
 	/// </summary>
 	public sealed class AllowConcurrenceModeRepeater : IRepeater
 	{
+		private readonly ICommandSettings _commandSettings;
 		private readonly TimeSpan _dueTime;
 
 		private readonly TimeSpan _period;
@@ -35,6 +36,7 @@ namespace Bsa.Msa.Common.Repeaters
 		private Action<CancellationToken> _repeatAction;
 		public AllowConcurrenceModeRepeater(ICommandSettings commandSettings)
 		{
+			_commandSettings = commandSettings;
 			this._dueTime = commandSettings.DueTime;
 			this._period = commandSettings.Period;
 
