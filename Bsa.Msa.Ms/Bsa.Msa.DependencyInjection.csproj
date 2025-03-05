@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Platforms>AnyCPU;x64</Platforms>
     <Description>integrating Autofac with MSA Bsa.Msa.RabbitMq.Core
 http://bsasearch.org/msa.html</Description>
@@ -30,16 +30,18 @@ http://bsasearch.org/msa.html</Description>
      }
  }</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>9.0.35</Version>
+    <Version>8.0.38</Version>
     <AssemblyVersion></AssemblyVersion>
     <Authors>Stanislav Batyrgareev</Authors>
     <FileVersion></FileVersion>
     <UserSecretsId>296ee702-81ce-4c22-9442-6b72b65466bd</UserSecretsId>
+    <PackageId></PackageId>
+    <Title></Title>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="9.0.35" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.2" />
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="8.0.38" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
   </ItemGroup>
 
 </Project>

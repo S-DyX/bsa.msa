@@ -55,7 +55,9 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 			PrefetchCount = (ushort)GetAttIntValue(raw, "prefetchCount", 5);
 			DegreeOfParallelism = GetAttIntValue(raw, "degreeOfParallelism", 1);
 			//Postfix = raw.GetRecursionAttribute("postfix");
-			Postfix = GetAttValue(raw, "postfix");
+			var attValue = GetAttValue(raw, "postfix");
+			if (!string.IsNullOrEmpty(attValue))
+				Postfix = attValue;
 			Ttl = GetAttIntValue(raw, "ttl")?? GetAttIntValue(raw, "Ttl");
             TurnOffInternalQueue = GetAttBoolValue(raw, "turnOffInternalQueue", false);
 
