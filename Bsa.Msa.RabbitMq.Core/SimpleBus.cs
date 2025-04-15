@@ -125,7 +125,18 @@ namespace Bsa.Msa.RabbitMq.Core
 			_simpleConnection.Add(getChannel =>
 			{
 				if (_messageHandlerSettings.ClearAfterStart)
-					getChannel.Invoke().QueuePurge(queueName);
+				{
+
+					try
+					{
+						getChannel.Invoke().QueuePurge(queueName);
+					}
+					catch (Exception ex)
+					{
+						_logger?.Error(ex.Message, ex);
+					}
+				}
+
 				//while (!isTerminating)
 				{
 					QueueingBasicConsumer(queueName, action, getChannel, configure);
