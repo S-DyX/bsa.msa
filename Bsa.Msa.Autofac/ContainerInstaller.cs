@@ -6,6 +6,7 @@ using Bsa.Msa.Common.Services.Impl;
 using Bsa.Msa.Common.Services.Interfaces;
 using Bsa.Msa.Common.Services.MessageHandling;
 using Bsa.Msa.Common.Services.Settings;
+using Bsa.Msa.DependencyInjection;
 using Bsa.Msa.RabbitMq.Core;
 using Bsa.Msa.RabbitMq.Core.Interfaces;
 using Bsa.Msa.RabbitMq.Core.Settings;
@@ -17,8 +18,9 @@ namespace Bsa.Msa.Autofac
 	{
 
 		public static void InstallHandlers(this IServiceCollection services)
-		{
-			services.AddSingleton<ILocalContainer, LocalContainer>();
+        {
+            services.AddSingleton<ILocalLogger, LocalLogger>();
+            services.AddSingleton<ILocalContainer, LocalContainer>();
 			services.AddSingleton<IHandlerRegistry, HandlerRegistry>();
 			services.AddSingleton<ICommandRegistry, CommandRegistry>();
 			services.AddSingleton<IServiceUnitManager, ServiceUnitManager>();

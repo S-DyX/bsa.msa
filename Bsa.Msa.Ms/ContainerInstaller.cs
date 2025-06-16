@@ -1,4 +1,5 @@
-﻿using Bsa.Msa.Common.Repeaters;
+﻿using Bsa.Msa.Common;
+using Bsa.Msa.Common.Repeaters;
 using Bsa.Msa.Common.Services.Commands;
 using Bsa.Msa.Common.Services.Impl;
 using Bsa.Msa.Common.Services.Interfaces;
@@ -23,6 +24,7 @@ namespace Bsa.Msa.DependencyInjection
         }
         public static void InstallHandlers(this IServiceCollection services)
 		{
+            services.AddSingleton<ILocalLogger, LocalLogger>();
             services.AddSingleton<ILocalContainer, LocalContainer>();
 			services.AddSingleton<IHandlerRegistry, HandlerRegistry>();
 			services.AddSingleton<ICommandRegistry, CommandRegistry>();
