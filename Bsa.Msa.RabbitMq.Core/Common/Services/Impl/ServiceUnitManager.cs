@@ -7,6 +7,7 @@ using Bsa.Msa.RabbitMq.Core;
 using Bsa.Msa.RabbitMq.Core.Common;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace Bsa.Msa.Common.Services.Impl
@@ -70,8 +71,11 @@ namespace Bsa.Msa.Common.Services.Impl
 			_logger?.Info($"Start load local bus");
 			_internalBus.Load();
 			_logger?.Info($"End load local bus");
-			foreach (var service in _servicesSection.GetServices())
+			var services = _servicesSection.GetServices().ToArray();
+			_logger?.Info($"Start load services ");
+			foreach (var service in services)
 			{
+				_logger?.Info($"Parse service section {service.Name}");
 				var handlers = service.GetHandlers();
 				foreach (var handler in handlers)
 				{
@@ -87,7 +91,7 @@ namespace Bsa.Msa.Common.Services.Impl
 				}
 			}
 
-
+			_logger?.Info($"End load services {services.Length}");
 			_serviceUnits.ForEach(x =>
 			{
 				x.StartAsync();
@@ -115,16 +119,24 @@ namespace Bsa.Msa.Common.Services.Impl
 		}
 		private void CreateNew(MessageHandlerSettings handler)
 		{
-			if (handler.DegreeOfParallelism > 0)
+			try
 			{
-				//for (var index = 0; index < handler.DegreeOfParallelism; index++)
+				if (handler.DegreeOfParallelism > 0)
 				{
-					var sub = _subscriberFactory.Create(handler.Type, handler, _messageHandlerFactory);
-					sub.OnError += HandleServiceUnitError;
-					_subscribers.Add(sub);
+					//for (var index = 0; index < handler.DegreeOfParallelism; index++)
+					{
+						var sub = _subscriberFactory.Create(handler.Type, handler, _messageHandlerFactory);
+						sub.OnError += HandleServiceUnitError;
+						_subscribers.Add(sub);
 
+					}
 				}
 			}
+			catch (Exception e)
+			{
+				_logger.Error($"Can not create handler: {handler.Name} Message:{e.Message}", e);
+			}
+			
 
 			_logger?.Info($"Created: Subscriber:{handler.Type}, Count:{handler.DegreeOfParallelism}");
 		}
