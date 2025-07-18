@@ -43,7 +43,7 @@
         {
           "name": "SimpleExampleCommand",
           "type": "SimpleExampleCommand",
-          "period": "00:00:05",
+          "period": "00:00:05"
           //"start": "14:49:30"
         }
         //{
@@ -55,6 +55,17 @@
         //}
       ],
       "handlers": [
+        {
+          
+            "name": "NothingToDoMessageHandler",
+            "type": "ExampleExceptionMessageHandler",
+            "subscriptionEndpoint": "test.queue4",
+            "degreeOfParallelism": 20,
+            "retryCount": 2,
+            //"useExchange": true,
+            "retry": true
+          
+        },
         {
           "name": "ExampleExceptionMessageHandler",
           "type": "ExampleExceptionMessageHandler",
@@ -68,7 +79,7 @@
           "name": "EmptyMessageHandlerAsync",
           "description": "EmptyMessageHandler a message is sent to a queue and the queue's message handler is registered in the current process, the message will be sent to the local bus",
           "type": "EmptyMessageHandlerAsync",
-          "subscriptionEndpoint": "test.queue12",
+          "subscriptionEndpoint": "test.queue3",
           "useExchange": true,
           "degreeOfParallelism": 500
         },
@@ -79,7 +90,8 @@
           "subscriptionEndpoint": "test.queue13",
           "useExchange": true,
           "degreeOfParallelism": 10
-        } //,
+        }
+        // ,
         //{
         //  "name": "testHandler",
         //  "description": "if a message is sent to a queue and the queue's message handler is registered in the current process, the message will be sent to the local bus",

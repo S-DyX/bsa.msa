@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Bsa.Msa.Common.Services.Impl
 {
@@ -92,17 +93,13 @@ namespace Bsa.Msa.Common.Services.Impl
 			}
 
 			_logger?.Info($"End load services {services.Length}");
-			_serviceUnits.ForEach(x =>
+			Parallel.ForEach(_serviceUnits, new ParallelOptions(){MaxDegreeOfParallelism = 2}, x =>
 			{
-				x.StartAsync();
-				if (!x.IsStarted)
-					Thread.Sleep(100);
+				x.Start();
 			});
-			_subscribers.ForEach(x =>
+			Parallel.ForEach(_subscribers, new ParallelOptions() { MaxDegreeOfParallelism = 2 }, x =>
 			{
-				x.StartAsync();
-				if (!x.IsStarted)
-					Thread.Sleep(200);
+				x.Start();
 			});
 		}
 

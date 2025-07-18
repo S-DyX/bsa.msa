@@ -280,8 +280,8 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			if (!_messageHandlerSettings.TurnOffInternalQueue)
 				ProcessFromLocalBus(queueName, action, getChannel);
-			if (_tasks.Count < _messageHandlerSettings.DegreeOfParallelism)
-				_tasks.Add(new AsyncWorker(_logger, _queue));
+			if (_queue.Count > 0 && _tasks.Count < _messageHandlerSettings.DegreeOfParallelism)
+				AddAWorker();
 
 			if (getChannel().IsClosed || _consumer == null)
 			{
@@ -392,7 +392,8 @@ namespace Bsa.Msa.RabbitMq.Core
 
 			return messageArray;
 		}
-		private List<AsyncWorker> _tasks = new List<AsyncWorker>(5);
+		private readonly object _syncTask = new object();
+		private readonly List<AsyncWorker> _tasks = new List<AsyncWorker>(5);
 		private ConcurrentQueue<Action> _queue = new ConcurrentQueue<Action>();
 		private EventHandler<BasicDeliverEventArgs> consumerOnReceived<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel)
 		{
@@ -444,7 +445,7 @@ namespace Bsa.Msa.RabbitMq.Core
 						if (!freeList.FastAny()
 							&& times < _queue.Count
 							&& tasksCount < _messageHandlerSettings.DegreeOfParallelism)
-							_tasks.Add(new AsyncWorker(_logger, _queue));
+							AddAWorker();
 						if (tasksCount > 1 && tasksCount > _queue.Count)
 						{
 							_logger?.Info(
@@ -457,7 +458,7 @@ namespace Bsa.Msa.RabbitMq.Core
 								if (asyncWorker.CanFree)
 								{
 									asyncWorker.Dispose();
-									_tasks.Remove(asyncWorker);
+									RemoveAWoker(asyncWorker);
 								}
 							}
 						}
@@ -508,6 +509,22 @@ namespace Bsa.Msa.RabbitMq.Core
 
 				}
 			};
+		}
+
+		private void RemoveAWoker(AsyncWorker asyncWorker)
+		{
+			lock (_syncTask)
+			{
+				_tasks.Remove(asyncWorker);
+			}
+		}
+
+		private void AddAWorker()
+		{
+			lock (_syncTask)
+			{
+				_tasks.Add(new AsyncWorker(_logger, _queue, RemoveAWoker));
+			}
 		}
 
 		private void UnsubscribeFromQueue<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel)
