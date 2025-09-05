@@ -113,7 +113,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		}
 
 		//private QueueingBasicConsumer _consumer;
-		private CustomEventingBasicConsumer _consumer;
+		private EventingBasicConsumer _consumer;
 
 
 		private void Consume<TMessage>(string queueName, Action<TMessage> action, Action<Func<IModel>> configure)
@@ -290,7 +290,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			if (getChannel().IsClosed || _consumer == null)
 			{
 				configure.Invoke(getChannel);
-				_consumer = new CustomEventingBasicConsumer(getChannel.Invoke());
+				_consumer = new EventingBasicConsumer(getChannel.Invoke());
 				getChannel().BasicConsume(queueName, false, _consumer);
 				_logger?.Info($"Start BasicConsume {_queueName};{_messageHandlerSettings.DegreeOfParallelism}");
 				if (!_messageHandlerSettings.TurnOffInternalQueue)
