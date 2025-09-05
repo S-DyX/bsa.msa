@@ -7,7 +7,7 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 	public interface ISimpleBus : IDisposable
 	{
 		//void Subscribe<TMessage>(Action<TMessage> action, IMessageHandlerSettings messageHandlerSettings);
-
+		bool IsModel { get; }
 		bool IsConnected { get; }
 
 		void Subscribe<TMessage>(string queueName, Action<TMessage> action, IMessageHandlerSettings messageHandlerSettings);

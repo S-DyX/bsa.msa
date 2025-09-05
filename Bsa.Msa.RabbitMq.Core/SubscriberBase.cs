@@ -128,18 +128,22 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		public void Stop()
 		{
+			_logger?.Info($"Stop subscriber {_messageHandlerSettings.SubscriptionEndpoint}");
 			_isRun = false;
 			DisposeInternal();
 		}
 
 		public event UnhandledExceptionEventHandler OnError;
-		public bool IsStarted => _isInit;
+		public bool IsStarted => _isInit && _simpleBus.IsModel;
+		public string Name => _messageHandlerSettings.SubscriptionEndpoint;
 
 
 		public void StartAsync()
 		{
 			_task = new Thread(Start);
 			_task.Start();
+
+			_logger?.Info($"Start subscriber {_messageHandlerSettings.SubscriptionEndpoint}");
 		}
 	}
 }

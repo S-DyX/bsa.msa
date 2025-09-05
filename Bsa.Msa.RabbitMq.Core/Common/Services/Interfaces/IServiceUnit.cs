@@ -13,5 +13,7 @@ namespace Bsa.Msa.Common.Services.Interfaces
 		event UnhandledExceptionEventHandler OnError;
 
 		bool IsStarted { get; }
+
+		string Name { get; }
 	}
 }

@@ -16,8 +16,8 @@ namespace Bsa.Msa.RabbitMq.Core
 		private readonly IHandlerRegistry _subscriptionRegistry;
 		private readonly ISerializeService _serializeService;
 
-		public SubscriberFactory(IRabbitMqSettings settings, ILocalBus localBus, IHandlerRegistry subscriptionRegistry,
-			ISerializeService serializeService = null, ILocalLogger localLogger = null, ISimpleBusNaming busNaming = null)
+		public SubscriberFactory(IRabbitMqSettings settings, ILocalBus localBus, IHandlerRegistry subscriptionRegistry, ILocalLogger localLogger = null,
+			ISerializeService serializeService = null,  ISimpleBusNaming busNaming = null)
 		{
 			this._localLogger = localLogger;
 			_busNaming = busNaming ?? new DefaultSimpleBusNaming();

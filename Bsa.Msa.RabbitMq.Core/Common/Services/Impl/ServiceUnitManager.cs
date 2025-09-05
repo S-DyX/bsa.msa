@@ -23,9 +23,9 @@ namespace Bsa.Msa.Common.Services.Impl
 		private readonly IMessageHandlerFactory _messageHandlerFactory;
 		private readonly List<ISubscriber> _subscribers = new List<ISubscriber>();
 		private readonly List<IServiceUnit> _serviceUnits = new List<IServiceUnit>();
-
+		private bool _isStart = true;
 		private readonly InternalBus _internalBus;
-
+		private readonly Thread _thread;
 		public ServiceUnitManager(IServicesSettings servicesSection,
 
 			ICommandFactory commandFactory,
@@ -35,6 +35,7 @@ namespace Bsa.Msa.Common.Services.Impl
 		: this(servicesSection, commandFactory, repeaterFactory, subscriberFactory, messageHandlerFactory, null, null)
 		{
 		}
+
 		public ServiceUnitManager(IServicesSettings servicesSection,
 			ICommandFactory commandFactory,
 			IRepeaterFactory repeaterFactory,
@@ -45,6 +46,8 @@ namespace Bsa.Msa.Common.Services.Impl
 		{
 			if (servicesSection == null) throw new ArgumentNullException("servicesSection");
 
+			_thread = new Thread(Check);
+			_thread.Start();
 			_servicesSection = servicesSection;
 			_commandFactory = commandFactory;
 			_repeaterFactory = repeaterFactory;
@@ -54,12 +57,12 @@ namespace Bsa.Msa.Common.Services.Impl
 
 			int minWorker, minIoc;
 			ThreadPool.GetMinThreads(out minWorker, out minIoc);
-			if (ThreadPool.SetMinThreads(minWorker * 2, minIoc * 2))
+			if (ThreadPool.SetMinThreads(minWorker * 4, minIoc * 4))
 			{
 				// The minimum number of threads was set successfully.
 			}
 			ThreadPool.GetMaxThreads(out minWorker, out minIoc);
-			if (ThreadPool.SetMaxThreads(minWorker * 2, minIoc * 2))
+			if (ThreadPool.SetMaxThreads(minWorker * 4, minIoc * 4))
 			{
 				// The minimum number of threads was set successfully.
 			}
@@ -67,6 +70,26 @@ namespace Bsa.Msa.Common.Services.Impl
 			_internalBus = InternalBus.Create(serializeService, _logger);
 		}
 
+		private void Check()
+		{
+			while (_isStart)
+			{
+				try
+				{
+					foreach (var subscriber in _subscribers)
+					{
+						_logger.Info($"IsStarted:{subscriber.IsStarted}; {subscriber.Name}");
+						if (!subscriber.IsStarted)
+							;
+					}
+					Thread.Sleep(3000);
+				}
+				catch (Exception e)
+				{
+					_logger.Error(e.Message,e);
+				}
+			}
+		}
 		public void Start()
 		{
 			_logger?.Info($"Start load local bus");
@@ -149,6 +172,7 @@ namespace Bsa.Msa.Common.Services.Impl
 			}
 			_subscribers.Clear();
 			_serviceUnits.Clear();
+			_isStart = false;
 		}
 
 		//private IEnumerable<IServiceUnit> CreateProcessingUnits(MessageHandlerSettings settings)

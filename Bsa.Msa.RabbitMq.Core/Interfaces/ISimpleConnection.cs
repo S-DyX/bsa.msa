@@ -20,6 +20,8 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		void SubscribeAll();
 
 		void Reconnect();
+
+		IModel CreateModel(string name);
 	}
 
 }

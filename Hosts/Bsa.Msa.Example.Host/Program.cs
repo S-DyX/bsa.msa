@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using Service.Registry.Common;
+using Bsa.Msa.Common;
 
 namespace Bsa.Msa.Example.Host
 {
@@ -42,6 +43,9 @@ namespace Bsa.Msa.Example.Host
 			containerBuilder.RegisterType<ServiceRegistryFactory>()
 				.As<IServiceRegistryFactory>();
 			containerBuilder.InstallServices();
+			containerBuilder.RegisterType<LocalLogger>()
+				.As<ILocalLogger>();
+			
 		}
 
 	}

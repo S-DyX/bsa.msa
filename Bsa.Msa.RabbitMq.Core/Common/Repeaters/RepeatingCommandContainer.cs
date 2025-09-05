@@ -68,6 +68,7 @@ namespace Bsa.Msa.Common.Repeaters
 
 		public event UnhandledExceptionEventHandler OnError;
 		public bool IsStarted => _isStated;
+		public string Name => _settings.Name;
 
 		private void HandleException(object sender, UnhandledExceptionEventArgs e)
 		{

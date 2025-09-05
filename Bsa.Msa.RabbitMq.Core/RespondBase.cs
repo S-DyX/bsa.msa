@@ -94,6 +94,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		public event UnhandledExceptionEventHandler OnError;
 		public bool IsStarted => true;
+		public string Name => _messageHandlerSettings.SubscriptionEndpoint;
 
 
 		public void StartAsync()

@@ -28,8 +28,8 @@ namespace Bsa.Msa.RabbitMq.Core
 				{
 					try
 					{
-						_connection = ConnectionFactory.CreateConnection();
 						ConnectionFactory.AutomaticRecoveryEnabled = true;
+						_connection = ConnectionFactory.CreateConnection();
 					}
 					catch (Exception ex)
 					{
@@ -85,14 +85,15 @@ namespace Bsa.Msa.RabbitMq.Core
 		private IModel _model;
 
 		private const int _sleepTime = 500;
-		protected IModel CreateModel(string name)
+		public IModel CreateModel(string name)
 		{
 			int i = 1;
 			while (!IsConnected)
 			{
 				try
 				{
-					Reconnect();
+					if (!IsConnected)
+						Reconnect();
 
 				}
 				catch (Exception ex)
@@ -108,16 +109,67 @@ namespace Bsa.Msa.RabbitMq.Core
 			return _model;
 
 		}
-
+		private void CloseL()
+		{
+			if (_connection != null)
+			{
+				try
+				{
+					if (!_connection.IsOpen)
+					{
+						var temp = _connection;
+						_connection = null;
+						temp.ConnectionShutdown -= _connection_ConnectionShutdown;
+						using (temp)
+						{
+						}
+					}
+				}
+				catch (ObjectDisposedException ode)
+				{
+					_logger?.Error(ode.ToString(), ode);
+				}
+				catch (Exception ex)
+				{
+					_logger?.Error(ex.ToString(), ex);
+					Task.Delay(_sleepTime);
+				}
+			}
+			if (_model != null)
+			{
+				try
+				{
+					var temp = _model;
+					
+					if (!temp.IsOpen)
+					{
+						_model = null;
+					}
+				}
+				catch (Exception ex)
+				{
+					_logger?.Error(ex.ToString(), ex);
+					Task.Delay(_sleepTime);
+				}
+				finally
+				{
+				}
+			}
+		}
 		private void Close()
 		{
 			if (_connection != null)
 			{
 				try
 				{
-					_connection.ConnectionShutdown -= _connection_ConnectionShutdown;
-					using (_connection)
+					if (!_connection.IsOpen)
 					{
+						var temp = _connection;
+						_connection = null;
+						temp.ConnectionShutdown -= _connection_ConnectionShutdown;
+						using (temp)
+						{
+						}
 					}
 				}
 				catch (ObjectDisposedException ode)
@@ -132,6 +184,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				finally
 				{
 					_connection = null;
+
 				}
 			}
 			if (_model != null)
@@ -253,13 +306,23 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		public void Reconnect()
 		{
-
-			lock (_sync)
+			if (!IsConnected)
 			{
-				if (!IsConnected)
+				lock (_sync)
 				{
-					Close();
-					Connect();
+					_logger?.Info("Reconnect");
+
+					if (ConnectionFactory.AutomaticRecoveryEnabled)
+					{
+						Connect();
+					}
+
+					
+					else if (!IsConnected)
+					{
+						CloseL();
+						Connect();
+					}
 				}
 			}
 
