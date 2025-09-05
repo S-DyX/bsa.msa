@@ -113,48 +113,51 @@ namespace Bsa.Msa.RabbitMq.Core
 		}
 
 		//private QueueingBasicConsumer _consumer;
-		private EventingBasicConsumer _consumer;
+		private CustomEventingBasicConsumer _consumer;
 
 
 		private void Consume<TMessage>(string queueName, Action<TMessage> action, Action<Func<IModel>> configure)
 		{
 
 			_queueName = queueName;
-
+			var getChannel = () => _simpleConnection.CreateModel(queueName);
 			// добавляем действия на подписку
-			_simpleConnection.Add(getChannel =>
+			_logger?.Info($"Add {queueName}");
+			if (_messageHandlerSettings.ClearAfterStart)
 			{
-				if (_messageHandlerSettings.ClearAfterStart)
+
+				try
 				{
-
-					try
-					{
-						getChannel.Invoke().QueuePurge(queueName);
-					}
-					catch (Exception ex)
-					{
-						_logger?.Error(ex.Message, ex);
-					}
+					getChannel.Invoke().QueuePurge(queueName);
 				}
-
-				//while (!isTerminating)
+				catch (Exception ex)
 				{
-					QueueingBasicConsumer(queueName, action, getChannel, configure);
-
+					_logger?.Error(ex.Message, ex);
 				}
-			});
+			}
+
+			//while (!isTerminating)
+			{
+
+
+			}
+			QueueingBasicConsumer(queueName, action, getChannel, configure);
 			// событие соединение с RMQ
 			_simpleConnection.BeforeConnect += () =>
 			{
-				_consumer = null;
+				_logger?.Info($"BeforeConnect {queueName}");
+				//_consumer = null;
 
 			};
 			_simpleConnection.AfterConnect += () =>
 			{
+				_logger?.Info($"AfterConnect {queueName}");
 
 			};
 			// выполняем подписку
-			_simpleConnection.SubscribeAll();
+			//_simpleConnection.SubscribeAll();
+
+			_logger?.Info($"Subsciribe {queueName}");
 		}
 
 		private void ConfigureExchange<TMessage>(string queueName, IMessageHandlerSettings settings)
@@ -276,17 +279,18 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		private const int _sleepTime = 500;
 		private int _iteration = 1;
-		private void QueueingBasicConsumer<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel, Action<Func<IModel>> configure)
+
+		private void QueueingBasicConsumer<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel,
+			Action<Func<IModel>> configure)
 		{
 			if (!_messageHandlerSettings.TurnOffInternalQueue)
 				ProcessFromLocalBus(queueName, action, getChannel);
-			if (_queue.Count > 0 && _tasks.Count < _messageHandlerSettings.DegreeOfParallelism)
-				AddAWorker();
+
 
 			if (getChannel().IsClosed || _consumer == null)
 			{
 				configure.Invoke(getChannel);
-				_consumer = new EventingBasicConsumer(getChannel.Invoke());
+				_consumer = new CustomEventingBasicConsumer(getChannel.Invoke());
 				getChannel().BasicConsume(queueName, false, _consumer);
 				_logger?.Info($"Start BasicConsume {_queueName};{_messageHandlerSettings.DegreeOfParallelism}");
 				if (!_messageHandlerSettings.TurnOffInternalQueue)
@@ -295,7 +299,14 @@ namespace Bsa.Msa.RabbitMq.Core
 				{
 					_consumer.Received += consumerOnReceivedOnlyRmq(queueName, action, getChannel);
 				}
+
 				_logger?.Info($"End BasicConsume {_queueName};{_messageHandlerSettings.DegreeOfParallelism}");
+			}
+
+			if (_queue.Count > 0 && _tasks.Count < _messageHandlerSettings.DegreeOfParallelism)
+			{
+				_logger?.Info($"Add default worker {_queueName}");
+				AddAWorker();
 			}
 		}
 
@@ -349,10 +360,10 @@ namespace Bsa.Msa.RabbitMq.Core
 					headers = item.Headers;
 					message = _serializeService.Deserialize<TMessage>(item.Body);
 				}
-				_logger?.Debug($"Invoke task messageId:{item.Id}");
+				_logger?.Debug($"Invoke task messageId:{item.Id} queueName={queueName}");
 				action.Invoke(message);
 				_internalBus.Ack(item.Id);
-				_logger?.Debug($"Ack messageId:{item.Id}");
+				_logger?.Debug($"Ack messageId:{item.Id}  queueName={queueName}");
 			}
 			catch (Exception exception)
 			{
@@ -374,18 +385,19 @@ namespace Bsa.Msa.RabbitMq.Core
 						_logger?.Error(
 							$"retry count exceeded {retryCount}>{_messageHandlerSettings.RetryCount.Value}. Error queueName={queueName}: {exception.Message}",
 							exception);
-						SendErrorMessage(getChannel(), queueName, messageArray, exception);
+						SendErrorMessage(getChannel, queueName, messageArray, exception);
 					}
 					else
 					{
 						retryCount++;
 						headers[_retrycount] = retryCount;
-						Send(getChannel(), queueName, messageArray, headers);
+						Send(getChannel, queueName, messageArray, headers);
 					}
 				}
 				else
 				{
-					SendErrorMessage(getChannel(), queueName, messageArray, exception);
+					//Send(getChannel, queueName, messageArray, headers);
+					SendErrorMessage(getChannel, queueName, messageArray, exception);
 				}
 				_internalBus.Ack(item.Id);
 			}
@@ -395,20 +407,35 @@ namespace Bsa.Msa.RabbitMq.Core
 		private readonly object _syncTask = new object();
 		private readonly List<AsyncWorker> _tasks = new List<AsyncWorker>(5);
 		private ConcurrentQueue<Action> _queue = new ConcurrentQueue<Action>();
-		private EventHandler<BasicDeliverEventArgs> consumerOnReceived<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel)
+
+		private void ActionOnModel(Func<IModel> channel, Action<IModel> action)
+		{
+			var model = channel();
+			lock (model)
+			{
+				action.Invoke(model);
+			}
+		}
+
+		private EventHandler<BasicDeliverEventArgs> consumerOnReceived<TMessage>(string queueName, Action<TMessage> action, Func<IModel> model)
 		{
 			return (ch, e) =>
 			{
+				_logger?.Debug($"Received message {_queueName}");
+
 				ulong? deliveryTag = null;
 				try
 				{
+
 					//ProcessFromLocalBus(queueName, action, getChannel);
 					var tasks = _tasks.Where(x => x.IsActive).ToList();
 					while (tasks.Count >= _messageHandlerSettings.DegreeOfParallelism)
 					{
-						Thread.Sleep(0);
-						_logger?.Debug($"To many threads Sleep {_queueName};{tasks.Count}>{_messageHandlerSettings.DegreeOfParallelism}");
+						Thread.Sleep(100);
+						_logger?.Debug($"To many threads Sleep {_queueName};{tasks.Count}>{_messageHandlerSettings.DegreeOfParallelism} ManagedThreadId:{Thread.CurrentThread.ManagedThreadId}");
 						tasks = _tasks.Where(x => x.IsActive).ToList();
+						//ActionOnModel(model, channel => channel.BasicNack(e.DeliveryTag, false, true));
+						//return;
 					}
 					var body = e.Body;
 					var properties = e.BasicProperties;
@@ -419,14 +446,14 @@ namespace Bsa.Msa.RabbitMq.Core
 						TMessage message = _serializeService.Deserialize<TMessage>(messageAsString);
 
 						var item = _internalBus.Register(e, queueName, messageAsString);
-						getChannel().BasicAck(e.DeliveryTag, false);
+						ActionOnModel(model, channel => channel.BasicAck(e.DeliveryTag, false));
 
 						Action a = () =>
 						{
 							Increment();
 							try
 							{
-								ProcessMessageInternalBus(queueName, action, getChannel, item, message);
+								ProcessMessageInternalBus(queueName, action, model, item, message);
 							}
 							catch (Exception e)
 							{
@@ -471,19 +498,19 @@ namespace Bsa.Msa.RabbitMq.Core
 
 					catch (Exception ex)
 					{
-						ProcessException<TMessage>(queueName, getChannel, ex, messageAsString, headers);
+						ProcessException<TMessage>(queueName, model, ex, messageAsString, headers);
 					}
 				}
 				catch (System.TimeoutException te)
 				{
 					_logger?.Error(te.Message, te);
-					UnsubscribeFromQueue(queueName, action, getChannel);
+					UnsubscribeFromQueue(queueName, action, model);
 					throw;
 				}
 				catch (System.IO.EndOfStreamException endOfStreamException)
 				{
 					_logger?.Error(endOfStreamException.Message, endOfStreamException);
-					UnsubscribeFromQueue(queueName, action, getChannel);
+					UnsubscribeFromQueue(queueName, action, model);
 					throw;
 				}
 				catch (OperationInterruptedException ex)
@@ -499,8 +526,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				{
 					if (deliveryTag.HasValue)
 					{
-						var channel = getChannel();
-						channel.BasicReject(deliveryTag.Value, true);
+						ActionOnModel(model, channel => channel.BasicReject(deliveryTag.Value, true));
 					}
 					// getChannel.Invoke().BasicAck(ea.DeliveryTag, false);
 					// ... process the message
@@ -626,14 +652,14 @@ namespace Bsa.Msa.RabbitMq.Core
 			catch (System.TimeoutException te)
 			{
 				_logger?.Error(te.Message, te);
-				_consumer.Received -= consumerOnReceivedOnlyRmq(queueName, action, getChannel);
+				//_consumer.Received -= consumerOnReceivedOnlyRmq(queueName, action, getChannel);
 				_consumer = null;
 				throw;
 			}
 			catch (System.IO.EndOfStreamException endOfStreamException)
 			{
 				_logger?.Error(endOfStreamException.Message, endOfStreamException);
-				_consumer.Received -= consumerOnReceivedOnlyRmq(queueName, action, getChannel);
+				//_consumer.Received -= consumerOnReceivedOnlyRmq(queueName, action, getChannel);
 				_consumer = null;
 				throw;
 			}
@@ -660,7 +686,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			}
 		}
 
-		private void SendErrorMessage(IModel channel, string queueName, byte[] body, Exception ex)
+		private void SendErrorMessage(Func<IModel> channel, string queueName, byte[] body, Exception ex)
 		{
 			var errorQueue = queueName + ".Error";
 			var dictionary = new Dictionary<string, object>(2)
@@ -669,17 +695,21 @@ namespace Bsa.Msa.RabbitMq.Core
 			dictionary["error"] = ex.ToString();
 			Send(channel, errorQueue, body, dictionary);
 		}
-		private void Send(IModel channel, string queue, byte[] body, IDictionary<string, object> headers)
+		private void Send(Func<IModel> channel, string queue, byte[] body, IDictionary<string, object> headers)
 		{
 			try
 			{
+				ActionOnModel(channel, model =>
+				{
+					var dictionary = GetArguments(_messageHandlerSettings);
+					model.QueueDeclare(queue, true, false, false, dictionary);
+					var props = model.CreateBasicProperties();
+					props.DeliveryMode = 2;
+					props.Headers = headers;
+					model.BasicPublish("", queue, props, body);
 
-				var dictionary = GetArguments(_messageHandlerSettings);
-				channel.QueueDeclare(queue, true, false, false, dictionary);
-				var props = channel.CreateBasicProperties();
-				props.DeliveryMode = 2;
-				props.Headers = headers;
-				channel.BasicPublish("", queue, props, body);
+				});
+
 			}
 			catch (Exception ex)
 			{
@@ -699,6 +729,8 @@ namespace Bsa.Msa.RabbitMq.Core
 		}
 
 		private bool isTerminating;
+
+		public bool IsModel => (_consumer?.Model?.IsOpen ?? false) && (_consumer.IsRunning);
 		public void Dispose()
 		{
 			isTerminating = true;
