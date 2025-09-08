@@ -726,7 +726,7 @@ namespace RabbitMQ.Client.Impl
                     consumer = DefaultConsumer;
                 }
             }
-            Console.WriteLine($"Model base: exchange:{exchange}");
+            //Console.WriteLine($"Model base: exchange:{exchange}");
             ConsumerDispatcher.HandleBasicDeliver(consumer,
                     consumerTag,
                     deliveryTag,

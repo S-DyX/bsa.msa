@@ -107,7 +107,7 @@ namespace RabbitMQ.Client.Impl
 							if (_tokenSource is { IsCancellationRequested: true })
 								return;
 
-							Console.WriteLine($"Loop {_worker}");
+							//Console.WriteLine($"Loop {_worker}");
 							work();
 
 						}
