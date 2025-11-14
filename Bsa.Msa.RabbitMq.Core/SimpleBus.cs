@@ -123,18 +123,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			var getChannel = () => _simpleConnection.CreateModel(queueName);
 			// добавляем действия на подписку
 			_logger?.Info($"Add {queueName}");
-			if (_messageHandlerSettings.ClearAfterStart)
-			{
-
-				try
-				{
-					getChannel.Invoke().QueuePurge(queueName);
-				}
-				catch (Exception ex)
-				{
-					_logger?.Error(ex.Message, ex);
-				}
-			}
+			
 
 			//while (!isTerminating)
 			{
@@ -152,6 +141,17 @@ namespace Bsa.Msa.RabbitMq.Core
 			_simpleConnection.AfterConnect += () =>
 			{
 				_logger?.Info($"AfterConnect {queueName}");
+				if (_messageHandlerSettings.ClearAfterStart)
+				{
+					try
+					{
+						getChannel.Invoke().QueuePurge(queueName);
+					}
+					catch (Exception ex)
+					{
+						_logger?.Error(ex.Message, ex);
+					}
+				}
 
 			};
 			// выполняем подписку

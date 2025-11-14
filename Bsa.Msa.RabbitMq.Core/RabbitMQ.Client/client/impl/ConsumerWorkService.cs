@@ -66,7 +66,7 @@ namespace RabbitMQ.Client.Impl
 			private Thread _worker;
 			CancellationTokenSource _tokenSource;
 			private SemaphoreSlim _limiter;
-
+			private bool _isRun = true;
 			public WorkPool(int concurrency)
 			{
 				_concurrency = concurrency;
@@ -97,13 +97,15 @@ namespace RabbitMQ.Client.Impl
 
 			void Loop()
 			{
-				while (true)
+				var i = 1;
+				while (_isRun)
 				{
 					try
 					{
-						var isReady = _channel.Reader.WaitToReadAsync().Result;
+						var isReady = IsReady();
 						while (isReady && _channel.Reader.TryRead(out Action work))
 						{
+							i = 1;
 							if (_tokenSource is { IsCancellationRequested: true })
 								return;
 
@@ -111,12 +113,30 @@ namespace RabbitMQ.Client.Impl
 							work();
 
 						}
+
+						if (!isReady)
+						{
+							Thread.Sleep(100 * i);
+							if (i < 10)
+								i++;
+						}
 					}
 					catch (Exception)
 					{
+						if (i < 10)
+							i++;
+						Thread.Sleep(100 * i);
 						// ignored
 					}
+					//Console.WriteLine($"Loop {_worker}");
 				}
+			}
+
+			private bool IsReady()
+			{
+
+				var isReady = _channel.Reader.WaitToReadAsync().Result;
+				return isReady;
 			}
 
 			async Task LoopWithConcurrency(CancellationToken cancellationToken)
@@ -165,6 +185,7 @@ namespace RabbitMQ.Client.Impl
 
 			public void Stop()
 			{
+				_isRun = false;
 				_channel.Writer.Complete();
 				_tokenSource?.Cancel();
 				_limiter?.Dispose();

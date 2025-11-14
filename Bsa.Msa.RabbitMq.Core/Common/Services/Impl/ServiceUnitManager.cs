@@ -23,7 +23,7 @@ namespace Bsa.Msa.Common.Services.Impl
 		private readonly IMessageHandlerFactory _messageHandlerFactory;
 		private readonly List<ISubscriber> _subscribers = new List<ISubscriber>();
 		private readonly List<IServiceUnit> _serviceUnits = new List<IServiceUnit>();
-		private bool _isStart = true;
+		private bool _isStart = false;
 		private readonly InternalBus _internalBus;
 		private readonly Thread _thread;
 		public ServiceUnitManager(IServicesSettings servicesSection,
