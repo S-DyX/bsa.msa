@@ -92,6 +92,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			{
 				try
 				{
+					_logger?.Info($"Create model {name}");
 					if (!IsConnected)
 						Reconnect();
 
@@ -113,6 +114,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			if (_connection != null)
 			{
+				_logger?.Info("Close connection");
 				try
 				{
 					if (!_connection.IsOpen)
@@ -316,8 +318,6 @@ namespace Bsa.Msa.RabbitMq.Core
 					{
 						Connect();
 					}
-
-					
 					else if (!IsConnected)
 					{
 						CloseL();
@@ -335,20 +335,10 @@ namespace Bsa.Msa.RabbitMq.Core
 			{
 				_model = Connection.CreateModel();
 			}
-			//_model = Connection.CreateModel();
-
-
-			//SubscribeAll();
 		}
 
 
-		public bool IsConnected
-		{
-			get
-			{
-				return _model != null && _model.IsOpen && Connection != null && Connection.IsOpen;
-			}
-		}
+		public bool IsConnected => _model != null && _model.IsOpen && Connection != null && Connection.IsOpen;
 
 		public void Dispose()
 		{

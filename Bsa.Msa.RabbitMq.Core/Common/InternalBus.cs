@@ -19,7 +19,7 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 		private readonly string _folder;
 		private bool _isReady;
 		private readonly object _lock = new object();
-		private ConcurrentDictionary<string, InternalBusItem> _concurrent =
+		private readonly ConcurrentDictionary<string, InternalBusItem> _concurrent =
 			new ConcurrentDictionary<string, InternalBusItem>();
 		private InternalBus(ISerializeService serializeService, ILocalLogger localLogger)
 		{
@@ -92,6 +92,11 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 				});
 				_isReady = true;
 			}
+		}
+
+		public int Count()
+		{
+			return _concurrent.Count;
 		}
 
 		private readonly ConcurrentDictionary<string, DateTime> _folders = new ConcurrentDictionary<string, DateTime>();

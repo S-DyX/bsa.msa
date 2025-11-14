@@ -421,7 +421,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			return (ch, e) =>
 			{
-				_logger?.Debug($"Received message {_queueName}");
+				_logger?.Debug($"Received message {_queueName}; internal Queue messages count: {_internalBus.Count()}");
 
 				ulong? deliveryTag = null;
 				try
@@ -429,13 +429,20 @@ namespace Bsa.Msa.RabbitMq.Core
 
 					//ProcessFromLocalBus(queueName, action, getChannel);
 					var tasks = _asyncWorkers.Where(x => x.IsActive).ToList();
+					var iterCount = 0;
 					while (tasks.Count >= _messageHandlerSettings.DegreeOfParallelism)
 					{
 						Thread.Sleep(100);
 						_logger?.Debug($"To many threads Sleep {_queueName};{tasks.Count}>{_messageHandlerSettings.DegreeOfParallelism} ManagedThreadId:{Thread.CurrentThread.ManagedThreadId}");
 						tasks = _asyncWorkers.Where(x => x.IsActive).ToList();
-						//ActionOnModel(model, channel => channel.BasicNack(e.DeliveryTag, false, true));
-						//return;
+						if (iterCount >= 10)
+						{
+							ActionOnModel(model, channel => channel.BasicNack(e.DeliveryTag, false, true));
+							_logger?.Debug($"To many threads Sleep {_queueName};Redelivered {e.DeliveryTag}");
+							return;
+						}
+
+						iterCount++;
 					}
 					var body = e.Body;
 					var properties = e.BasicProperties;
