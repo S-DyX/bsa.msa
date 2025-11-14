@@ -5,6 +5,7 @@ using FileStorage.Contracts.Rest.Impl.FileStorage;
 using Newtonsoft.Json;
 using Service.Registry.Common;
 using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,7 +31,7 @@ namespace Bsa.Msa.Example.Host.Handlers
             Thread.Sleep(5000);
 
             Console.WriteLine($"{DateTime.UtcNow} Thread:{Thread.CurrentThread.ManagedThreadId} Processed: {JsonConvert.SerializeObject(message)}");
-            throw new SocketException();
+            throw new IOException();
 
         }
     }

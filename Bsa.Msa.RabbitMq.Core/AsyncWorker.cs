@@ -41,17 +41,22 @@ namespace Bsa.Msa.RabbitMq.Core
 				{
 					if (_queue.TryDequeue(out var action))
 					{
-						_sleepTimes = 0;
-						_isActive = true;
 						if (action != null)
 						{
+							_localLogger?.Debug($"Start process Worker {Thread.CurrentThread.ManagedThreadId}");
+							_isActive = true;
+							_sleepTimes = 0;
 							_lastAction = DateTime.UtcNow;
 							action.Invoke();
 							_lastAction = DateTime.UtcNow;
+							_isActive = false;
+							_localLogger?.Debug($"End process Worker {Thread.CurrentThread.ManagedThreadId}");
 						}
+
 					}
 					else
 					{
+						_localLogger?.Debug($"Worker sleep {Thread.CurrentThread.ManagedThreadId}");
 						var sleepTimes = _sleepTimes;
 						if (_sleepTimes < 50)
 						{
@@ -60,6 +65,7 @@ namespace Bsa.Msa.RabbitMq.Core
 						else
 						{
 							_isRun = false;
+							_isActive = false;
 							_release?.Invoke(this);
 							return;
 						}
@@ -70,7 +76,6 @@ namespace Bsa.Msa.RabbitMq.Core
 						Thread.Sleep(100 * sleepTimes);
 					}
 				}
-
 				catch (Exception ex)
 				{
 					_localLogger?.Error(ex.Message, ex);

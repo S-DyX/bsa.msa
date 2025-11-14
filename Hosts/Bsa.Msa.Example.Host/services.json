@@ -41,30 +41,36 @@
       "name": "serviceUseQueue",
       "commands": [
         {
-          "name": "SimpleExampleCommand",
-          "type": "SimpleExampleCommand",
-          "period": "00:00:05"
-          //"start": "14:49:30"
-        }
-        //{
-        //  "name": "testCommand",
-        //  "type": "ExampleCommand",
-        //  "publicationEndpoint": "test.queue",
-        //  "fileName": "some2.txt",
-        //  "period": "00:00:05"
-        //}
+                "name": "testCommandEx",
+                "type": "ExampleCommand",
+                "fileName": "some.txt",
+                "period": "00:01:01"
+              },
+          {
+            "name": "SimpleExampleCommand",
+            "type": "SimpleExampleCommand",
+            "period": "00:01:05"
+            //"start": "14:49:30"
+          }
+          //{
+          //  "name": "testCommand",
+          //  "type": "ExampleCommand",
+          //  "publicationEndpoint": "test.queue",
+          //  "fileName": "some2.txt",
+          //  "period": "00:00:05"
+          //}
       ],
       "handlers": [
         {
-          
-            "name": "NothingToDoMessageHandler",
-            "type": "ExampleExceptionMessageHandler",
-            "subscriptionEndpoint": "test.queue4",
-            "degreeOfParallelism": 20,
-            "retryCount": 2,
-            //"useExchange": true,
-            "retry": true
-          
+
+          "name": "NothingToDoMessageHandler",
+          "type": "ExampleExceptionMessageHandler",
+          "subscriptionEndpoint": "test.queue4",
+          "degreeOfParallelism": 11,
+          "retryCount": 2,
+          //"useExchange": true,
+          "retry": true
+
         },
         {
           "name": "ExampleExceptionMessageHandler",
@@ -81,7 +87,7 @@
           "type": "EmptyMessageHandlerAsync",
           "subscriptionEndpoint": "test.queue3",
           "useExchange": true,
-          "degreeOfParallelism": 500
+          "degreeOfParallelism": 22
         },
         {
           "name": "EmptyMessageHandler",
@@ -89,7 +95,16 @@
           "type": "EmptyMessageHandler",
           "subscriptionEndpoint": "test.queue13",
           "useExchange": true,
-          "degreeOfParallelism": 10
+          "degreeOfParallelism": 11
+        },
+        {
+
+          "name": "TimeoutMessageHandler",
+          "type": "TimeoutMessageHandler",
+          "subscriptionEndpoint": "test.timeout",
+          "useExchange": true,
+          "degreeOfParallelism": 1
+
         }
         // ,
         //{
