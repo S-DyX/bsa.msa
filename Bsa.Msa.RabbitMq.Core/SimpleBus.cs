@@ -123,7 +123,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			var getChannel = () => _simpleConnection.CreateModel(queueName);
 			// добавляем действия на подписку
 			_logger?.Info($"Add {queueName}");
-			
+
 
 			//while (!isTerminating)
 			{
@@ -429,21 +429,28 @@ namespace Bsa.Msa.RabbitMq.Core
 
 					//ProcessFromLocalBus(queueName, action, getChannel);
 					var tasks = _asyncWorkers.Where(x => x.IsActive).ToList();
-					var iterCount = 0;
-					while (tasks.Count >= _messageHandlerSettings.DegreeOfParallelism)
+					//var iterCount = 0;
+					if (tasks.Count >= _messageHandlerSettings.DegreeOfParallelism)
 					{
-						Thread.Sleep(100);
 						_logger?.Debug($"To many threads Sleep {_queueName};{tasks.Count}>{_messageHandlerSettings.DegreeOfParallelism} ManagedThreadId:{Thread.CurrentThread.ManagedThreadId}");
-						tasks = _asyncWorkers.Where(x => x.IsActive).ToList();
-						if (iterCount >= 10)
-						{
-							ActionOnModel(model, channel => channel.BasicNack(e.DeliveryTag, false, true));
-							_logger?.Debug($"To many threads Sleep {_queueName};Redelivered {e.DeliveryTag}");
-							return;
-						}
-
-						iterCount++;
+						ProcessSingleRmqMessage(_queueName, action, model, e);
+						return;
 					}
+					//while (tasks.Count >= _messageHandlerSettings.DegreeOfParallelism)
+					//{
+					//	Thread.Sleep(100);
+					//	_logger?.Debug($"To many threads Sleep {_queueName};{tasks.Count}>{_messageHandlerSettings.DegreeOfParallelism} ManagedThreadId:{Thread.CurrentThread.ManagedThreadId}");
+					//	tasks = _asyncWorkers.Where(x => x.IsActive).ToList();
+					//	if (iterCount >= 10)
+					//	{
+					//		ActionOnModel(model, channel => channel.BasicNack(e.DeliveryTag, false, true));
+					//		_logger?.Debug($"To many threads Sleep {_queueName};Redelivered {e.DeliveryTag}");
+					//		return;
+					//	}
+
+					//	iterCount++;
+					//}
+
 					var body = e.Body;
 					var properties = e.BasicProperties;
 					var headers = properties.Headers ?? new Dictionary<string, object>();
@@ -475,20 +482,16 @@ namespace Bsa.Msa.RabbitMq.Core
 						//Console.WriteLine($" asyncWorker:Count:{_queue.Count};Task:{tasksCount}");
 						_queue.Enqueue(a);
 						var freeList = _asyncWorkers.Where(x => x.CanFree).ToList();
-						var times = tasksCount << 6;
+						var times = tasksCount << 3;
 						if (!freeList.FastAny()
 							&& times < _queue.Count
 							&& tasksCount < _messageHandlerSettings.DegreeOfParallelism)
 							AddAWorker();
 						if (tasksCount > 1 && tasksCount > _queue.Count)
 						{
-							_logger?.Info(
-								$"Message Count:{_queue.Count};Thread Count:{_asyncWorkers.Count}");
+							_logger?.Info($"Message Count:{_queue.Count};Thread Count:{_asyncWorkers.Count}");
 							foreach (var asyncWorker in freeList)
 							{
-								//_logger?.Warn(
-								//	$"free asyncWorker:Count:{_queue.Count};Task:{_tasks.Count};Free:{freeList.Count}");
-
 								if (asyncWorker.CanFree)
 								{
 									asyncWorker.Dispose();
@@ -535,10 +538,6 @@ namespace Bsa.Msa.RabbitMq.Core
 					{
 						ActionOnModel(model, channel => channel.BasicReject(deliveryTag.Value, true));
 					}
-					// getChannel.Invoke().BasicAck(ea.DeliveryTag, false);
-					// ... process the message
-					//if (e != null)
-					//	getChannel().BasicAck(e.DeliveryTag, false);
 
 				}
 			};
@@ -548,6 +547,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			lock (_syncTask)
 			{
+				asyncWorker.Stop();
 				_asyncWorkers.Remove(asyncWorker);
 			}
 		}
@@ -660,14 +660,14 @@ namespace Bsa.Msa.RabbitMq.Core
 			{
 				_logger?.Error(te.Message, te);
 				//_consumer.Received -= consumerOnReceivedOnlyRmq(queueName, action, getChannel);
-				_consumer = null;
+				//_consumer = null;
 				throw;
 			}
 			catch (System.IO.EndOfStreamException endOfStreamException)
 			{
 				_logger?.Error(endOfStreamException.Message, endOfStreamException);
 				//_consumer.Received -= consumerOnReceivedOnlyRmq(queueName, action, getChannel);
-				_consumer = null;
+				//_consumer = null;
 				throw;
 			}
 			catch (OperationInterruptedException ex)

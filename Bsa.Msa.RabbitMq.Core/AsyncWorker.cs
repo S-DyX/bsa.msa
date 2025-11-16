@@ -33,6 +33,14 @@ namespace Bsa.Msa.RabbitMq.Core
 		private int _sleepTimes = 0;
 
 		public bool CanFree => !_isActive && _lastAction < DateTime.UtcNow.AddSeconds(-60);
+
+		public void Stop()
+		{
+			_isRun = false;
+			_isActive = false;
+
+		}
+
 		private void Process()
 		{
 			while (_isRun)
