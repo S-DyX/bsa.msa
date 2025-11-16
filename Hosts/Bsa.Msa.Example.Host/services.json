@@ -103,7 +103,8 @@
           "type": "TimeoutMessageHandler",
           "subscriptionEndpoint": "test.timeout",
           "useExchange": true,
-          "degreeOfParallelism": 1
+          "clearAfterStart": true,
+          "degreeOfParallelism": 3
 
         }
         // ,

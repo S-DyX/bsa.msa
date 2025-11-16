@@ -21,7 +21,7 @@ namespace Bsa.Msa.Example.Host.Commands
 
 		public void Execute()
 		{
-			for (int i = 0; i < 2; i++)
+			for (int i = 0; i < 20; i++)
 			{
 				_singleRmqBus.Publish(new EmptyMessage()
 				{
