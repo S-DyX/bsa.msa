@@ -334,6 +334,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			if (_model == null)
 			{
 				_model = Connection.CreateModel();
+				AfterConnect?.Invoke();
 			}
 		}
 

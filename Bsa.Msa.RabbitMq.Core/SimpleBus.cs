@@ -118,20 +118,12 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		private void Consume<TMessage>(string queueName, Action<TMessage> action, Action<Func<IModel>> configure)
 		{
-
+			
 			_queueName = queueName;
 			var getChannel = () => _simpleConnection.CreateModel(queueName);
 			// добавляем действия на подписку
 			_logger?.Info($"Add {queueName}");
 
-
-			//while (!isTerminating)
-			{
-
-
-			}
-			QueueingBasicConsumer(queueName, action, getChannel, configure);
-			// событие соединение с RMQ
 			_simpleConnection.BeforeConnect += () =>
 			{
 				_logger?.Info($"BeforeConnect {queueName}");
@@ -154,6 +146,9 @@ namespace Bsa.Msa.RabbitMq.Core
 				}
 
 			};
+			QueueingBasicConsumer(queueName, action, getChannel, configure);
+			// событие соединение с RMQ
+			
 			// выполняем подписку
 			//_simpleConnection.SubscribeAll();
 
@@ -556,7 +551,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			lock (_syncTask)
 			{
-				_asyncWorkers.Add(new AsyncWorker(_logger, _queue, RemoveAWoker));
+				_asyncWorkers.Add(new AsyncWorker(_logger, _queue, RemoveAWoker,_queueName));
 			}
 		}
 
