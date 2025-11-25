@@ -118,8 +118,9 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		private void Consume<TMessage>(string queueName, Action<TMessage> action, Action<Func<IModel>> configure)
 		{
-			
+
 			_queueName = queueName;
+			_logger?.Info($"Start Subsciribe {queueName}");
 			var getChannel = () => _simpleConnection.CreateModel(queueName);
 			// добавляем действия на подписку
 			_logger?.Info($"Add {queueName}");
@@ -148,7 +149,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			};
 			QueueingBasicConsumer(queueName, action, getChannel, configure);
 			// событие соединение с RMQ
-			
+
 			// выполняем подписку
 			//_simpleConnection.SubscribeAll();
 
@@ -157,8 +158,10 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		private void ConfigureExchange<TMessage>(string queueName, IMessageHandlerSettings settings)
 		{
+			_logger?.Info($"Start ConfigureExchange {queueName}");
 			var action = GetExchangeConfigure<TMessage>(queueName, settings);
 			_simpleConnection.Configure(queueName, action);
+			_logger?.Info($"End ConfigureExchange {queueName}");
 		}
 
 		private Action<Func<IModel>> GetExchangeConfigure<TMessage>(string queueName, IMessageHandlerSettings settings)
@@ -197,6 +200,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		public void Delete<TMessage>() where TMessage : class
 		{
+			_logger?.Info($"Delete");
 			var exchangeName = _busNaming.GetExchangeName<TMessage>();
 			_simpleConnection.Configure(exchangeName, getChannel =>
 			{
@@ -425,7 +429,7 @@ namespace Bsa.Msa.RabbitMq.Core
 					//ProcessFromLocalBus(queueName, action, getChannel);
 					var tasks = _asyncWorkers.Where(x => x.IsActive).ToList();
 					//var iterCount = 0;
-					if (tasks.Count >= _messageHandlerSettings.DegreeOfParallelism)
+					if (tasks.Count >= _messageHandlerSettings.DegreeOfParallelism || (_messageHandlerSettings.DegreeOfParallelism == 1 && _queue.Count==0))
 					{
 						_logger?.Debug($"To many threads Sleep {_queueName};{tasks.Count}>{_messageHandlerSettings.DegreeOfParallelism} ManagedThreadId:{Thread.CurrentThread.ManagedThreadId}");
 						ProcessSingleRmqMessage(_queueName, action, model, e);
@@ -551,7 +555,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			lock (_syncTask)
 			{
-				_asyncWorkers.Add(new AsyncWorker(_logger, _queue, RemoveAWoker,_queueName));
+				_asyncWorkers.Add(new AsyncWorker(_logger, _queue, RemoveAWoker, _queueName));
 			}
 		}
 
@@ -811,7 +815,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			if (!string.IsNullOrEmpty(routingKey))
 				type = topic;
 
-			exchangeName = exchangeName ?? _busNaming.GetExchangeName<TMessage>();
+			exchangeName = exchangeName ?? _busNaming.GetExchangeName<TMessage>(); 
 			_simpleConnection.Configure(exchangeName, getChannel =>
 			{
 

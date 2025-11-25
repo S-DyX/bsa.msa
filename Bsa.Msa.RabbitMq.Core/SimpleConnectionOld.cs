@@ -27,8 +27,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				if (_connection == null)
 				{
 					try
-					{
-						ConnectionFactory.AutomaticRecoveryEnabled = true;
+					{ 
 						_connection = ConnectionFactory.CreateConnection();
 					}
 					catch (Exception ex)
@@ -72,13 +71,15 @@ namespace Bsa.Msa.RabbitMq.Core
 			{
 				var hostName = _settings.Host;
 
-				return _connectionFactory ?? (_connectionFactory = new ConnectionFactory()
+				var connectionFactory = _connectionFactory ??= new ConnectionFactory()
 				{
 					HostName = hostName,
 					Password = _settings.Password,
 					UserName = _settings.UserName,
+					AutomaticRecoveryEnabled = true,
 					VirtualHost = _settings.VirtualHost ?? "/"
-				});
+				};
+				return connectionFactory;
 			}
 		}
 
@@ -87,6 +88,12 @@ namespace Bsa.Msa.RabbitMq.Core
 		private const int _sleepTime = 500;
 		public IModel CreateModel(string name)
 		{
+			if (ConnectionFactory.AutomaticRecoveryEnabled)
+			{
+				Connect();
+				return _model;
+			}
+			var retryCount = 0;
 			int i = 1;
 			while (!IsConnected)
 			{
@@ -95,6 +102,12 @@ namespace Bsa.Msa.RabbitMq.Core
 					_logger?.Info($"Create model {name}");
 					if (!IsConnected)
 						Reconnect();
+					retryCount++;
+					if (retryCount > 10)
+					{ 
+						Thread.Sleep(2000);
+						_logger?.Info($"CreateModel Sleep model {name}");
+					}
 
 				}
 				catch (Exception ex)
