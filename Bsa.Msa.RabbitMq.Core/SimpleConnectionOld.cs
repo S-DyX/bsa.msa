@@ -90,7 +90,8 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			if (ConnectionFactory.AutomaticRecoveryEnabled)
 			{
-				Connect();
+				if (!IsConnected)
+					Connect();
 				return _model;
 			}
 			var retryCount = 0;
