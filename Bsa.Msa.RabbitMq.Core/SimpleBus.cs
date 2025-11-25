@@ -98,7 +98,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			_messageHandlerSettings = messageHandlerSettings;
 			if (messageHandlerSettings.AppendGuid)
 				queueName = $"{queueName}_{Guid.NewGuid()}";
-			//ConfigureExchange<TMessage>(queueName);
+			
 
 			Consume<TMessage>(queueName, action, GetExchangeConfigure<TMessage>(queueName, messageHandlerSettings));
 
@@ -133,12 +133,15 @@ namespace Bsa.Msa.RabbitMq.Core
 			};
 			_simpleConnection.AfterConnect += () =>
 			{
+				if (_messageHandlerSettings.UseExchange)
+					ConfigureExchange<TMessage>(queueName, _messageHandlerSettings);
 				_logger?.Info($"AfterConnect {queueName}");
 				if (_messageHandlerSettings.ClearAfterStart)
 				{
 					try
 					{
-						getChannel.Invoke().QueuePurge(queueName);
+						var model = getChannel.Invoke();
+						model.QueuePurge(queueName);
 					}
 					catch (Exception ex)
 					{
