@@ -38,6 +38,17 @@ namespace Bsa.Msa.RabbitMq.Core
 			_isRun = true;
 			_logger = logger;
 			_messageHandlerSettings = messageHandlerSettings;
+			_simpleBus.Shutdown = () =>
+			{
+				try
+				{
+					Start();
+				}
+				catch (Exception e)
+				{
+					_logger?.Error(e.Message, e);
+				}
+			};
 		}
 
 		private void DisposeInternal()

@@ -12,6 +12,7 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 
 		void Subscribe<TMessage>(string queueName, Action<TMessage> action, IMessageHandlerSettings messageHandlerSettings);
 
+		Action Shutdown { get; set; }
 		void SubscribeExchange<TMessage>(string queueName, Action<TMessage> action, IMessageHandlerSettings messageHandlerSettings);
 
 		void SendSelf<TMessage>(TMessage message) where TMessage : class;

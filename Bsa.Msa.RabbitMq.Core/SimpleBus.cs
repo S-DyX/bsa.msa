@@ -14,6 +14,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using static System.Collections.Specialized.BitVector32;
 
 namespace Bsa.Msa.RabbitMq.Core
 {
@@ -81,6 +82,8 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		}
 
+		public Action Shutdown { get; set; }
+
 		private static IDictionary<string, object> GetArguments(IMessageHandlerSettings messageHandlerSettings)
 		{
 			IDictionary<string, object> arguments = new Dictionary<string, object>(0);
@@ -120,7 +123,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 
 			_queueName = queueName;
-			_logger?.Info($"Start Subsciribe {queueName}");
+			_logger?.Info($"Start Subsciribe {_queueName}");
 			var getChannel = () => _simpleConnection.CreateModel(queueName);
 			// добавляем действия на подписку
 			_logger?.Info($"Add {queueName}");
@@ -134,14 +137,14 @@ namespace Bsa.Msa.RabbitMq.Core
 			_simpleConnection.AfterConnect += () =>
 			{
 				if (_messageHandlerSettings.UseExchange)
-					ConfigureExchange<TMessage>(queueName, _messageHandlerSettings);
-				_logger?.Info($"AfterConnect {queueName}");
+					ConfigureExchange<TMessage>(_queueName, _messageHandlerSettings);
+				_logger?.Info($"AfterConnect {_queueName}");
 				if (_messageHandlerSettings.ClearAfterStart)
 				{
 					try
 					{
 						var model = getChannel.Invoke();
-						model.QueuePurge(queueName);
+						model.QueuePurge(_queueName);
 					}
 					catch (Exception ex)
 					{
@@ -296,10 +299,14 @@ namespace Bsa.Msa.RabbitMq.Core
 				getChannel().BasicConsume(queueName, false, _consumer);
 				_logger?.Info($"Start BasicConsume {_queueName};{_messageHandlerSettings.DegreeOfParallelism}");
 				if (!_messageHandlerSettings.TurnOffInternalQueue)
+				{
 					_consumer.Received += consumerOnReceived(queueName, action, getChannel);
+					_consumer.Shutdown += _consumer_Shutdown;
+				}
 				else
 				{
 					_consumer.Received += consumerOnReceivedOnlyRmq(queueName, action, getChannel);
+					_consumer.Shutdown += _consumer_Shutdown;
 				}
 
 				_logger?.Info($"End BasicConsume {_queueName};{_messageHandlerSettings.DegreeOfParallelism}");
@@ -310,6 +317,15 @@ namespace Bsa.Msa.RabbitMq.Core
 				_logger?.Info($"Add default worker {_queueName}");
 				AddAWorker();
 			}
+		}
+
+		private void _consumer_Shutdown(object sender, ShutdownEventArgs e)
+		{
+			//_consumer.Received -= consumerOnReceived(_queueName, action, getChannel);
+			_consumer.Shutdown -= _consumer_Shutdown;
+			_consumer = null;
+			_simpleConnection.Close();
+			Shutdown?.Invoke();
 		}
 
 		private void ProcessFromLocalBus<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel)

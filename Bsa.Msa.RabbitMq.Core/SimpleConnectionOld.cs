@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Bsa.Msa.RabbitMq.Core
 {
-	public class SimpleConnection : ISimpleConnection
+	public sealed class SimpleConnection : ISimpleConnection
 	{
 		private readonly IRabbitMqSettings _settings;
 		private readonly ILocalLogger _logger;
@@ -172,7 +172,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				}
 			}
 		}
-		private void Close()
+		public void Close()
 		{
 			if (_connection != null)
 			{

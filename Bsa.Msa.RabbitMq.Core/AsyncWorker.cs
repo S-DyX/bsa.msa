@@ -39,6 +39,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		public void Stop()
 		{
+			_localLogger?.Debug($"Stop process {_name} Worker ManagedThreadId:{Thread.CurrentThread.ManagedThreadId}");
 			_isRun = false;
 			_isActive = false;
 
