@@ -322,7 +322,8 @@ namespace Bsa.Msa.RabbitMq.Core
 		private void _consumer_Shutdown(object sender, ShutdownEventArgs e)
 		{
 			//_consumer.Received -= consumerOnReceived(_queueName, action, getChannel);
-			_consumer.Shutdown -= _consumer_Shutdown;
+			if (_consumer!=null)
+				_consumer.Shutdown -= _consumer_Shutdown;
 			_consumer = null;
 			_simpleConnection.Close();
 			Shutdown?.Invoke();
