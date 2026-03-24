@@ -19,7 +19,7 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 
 		void SubscribeAll();
 
-		void Reconnect();
+		void Reconnect(string? name = null);
 
 		void Close();
 

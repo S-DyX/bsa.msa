@@ -143,12 +143,13 @@ namespace Bsa.Msa.RabbitMq.Core
 				{
 					try
 					{
+						_internalBus.Clear(_queueName);
 						var model = getChannel.Invoke();
 						model.QueuePurge(_queueName);
 					}
 					catch (Exception ex)
 					{
-						_logger?.Error(ex.Message, ex);
+						_logger?.Error($"Try to clean Message:{ex.Message}", ex);
 					}
 				}
 
@@ -891,11 +892,11 @@ namespace Bsa.Msa.RabbitMq.Core
 		}
 
 
-		public void Reconnect()
+		public void Reconnect(string? name = null)
 		{
 			try
 			{
-				_simpleConnection.Reconnect();
+				_simpleConnection.Reconnect(name);
 
 			}
 			catch

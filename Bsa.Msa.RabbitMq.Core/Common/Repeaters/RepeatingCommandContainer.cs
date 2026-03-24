@@ -16,6 +16,7 @@ namespace Bsa.Msa.Common.Repeaters
 		private readonly ICommandSettings _settings;
 		private readonly IRepeaterFactory _repeaterFactory;
 		private readonly ICommandFactory _commandFactory;
+		private readonly ILocalLogger _logger;
 
 		private IRepeater _repeater;
 		private ICommand _command;
@@ -24,11 +25,13 @@ namespace Bsa.Msa.Common.Repeaters
 		public RepeatingCommandContainer(
 			ISettings settings,
 			IRepeaterFactory repeaterFactory,
-			ICommandFactory commandFactory)
+			ICommandFactory commandFactory,
+			ILocalLogger logger = null)
 		{
 			this._settings = settings as ICommandSettings;
 			this._repeaterFactory = repeaterFactory;
 			this._commandFactory = commandFactory;
+			_logger = logger;
 		}
 		private bool _isStated = false;
 
@@ -37,9 +40,9 @@ namespace Bsa.Msa.Common.Repeaters
 		/// </summary>
 		public void Start()
 		{
-			_repeater = _repeaterFactory.Create(_settings);
+			_repeater = _repeaterFactory.Create(_settings, _logger);
 			_repeater.Error += HandleException;
-
+			_logger?.Info($"Start command: {_settings.Name}");
 
 			_isStated = true;
 			_repeater.Start
@@ -49,9 +52,12 @@ namespace Bsa.Msa.Common.Repeaters
 				{
 					var settings = (ISettings)_settings;
 					_command = _commandFactory.Create(_settings.Type, settings, cancellationToken);
+					_logger?.Info($"Executing command: {_settings.Name}");
 					_command.Execute();
+					_logger?.Info($"Was executed command: {_settings.Name}");
 				}
 			);
+			_logger?.Info($"Start command end: {_settings.Name}");
 		}
 
 		public void Stop()

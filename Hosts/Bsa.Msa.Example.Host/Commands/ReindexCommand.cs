@@ -28,6 +28,7 @@ namespace Bsa.Msa.Example.Host.Commands
 		{
 			var exampleMessage = new ReindexMessage()
 			{ 
+				Body = new string('c', 29698984)
 			}; 
 			_singleRmqBus.Publish(exampleMessage);
 			

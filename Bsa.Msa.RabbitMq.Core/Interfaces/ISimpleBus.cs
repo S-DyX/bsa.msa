@@ -44,7 +44,7 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 			where TResponse : class;
 
 
-		void Reconnect();
+		void Reconnect(string? name = null);
 	}
 }
 

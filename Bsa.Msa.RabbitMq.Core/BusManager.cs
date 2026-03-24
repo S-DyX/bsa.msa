@@ -27,7 +27,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			{
 				if (!_simpleBus.IsConnected)
 				{
-					_simpleBus.Reconnect();
+					_simpleBus.Reconnect("From bus");
 				}
 				return _simpleBus;
 			}

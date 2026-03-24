@@ -90,10 +90,25 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 					}
 
 				});
+				var groups = _concurrent.GroupBy(x => x.Value.Queue);
+				foreach (var group in groups)
+				{
+					_localLogger?.Info($"Load from internal Queue name:{group.Key};Count:{group.Count()}");
+				}
 				_isReady = true;
 			}
 		}
-
+		public void Clear(string queue)
+		{
+			lock (_lock)
+			{
+				var forClear = _concurrent.Where(x => x.Value.Queue == queue);
+				foreach (var keyValuePair in forClear)
+				{
+					_concurrent.Remove(keyValuePair.Key, out var val);
+				}
+			}
+		}
 		public int Count()
 		{
 			return _concurrent.Count;

@@ -6,6 +6,8 @@ namespace Bsa.Msa.Common.Repeaters
 {
 	public sealed class DisallowConcurrentModeRepeater : IRepeater
 	{
+		private readonly ILocalLogger _logger;
+
 		private class OperationsQueue
 		{
 			private int _operationsQueued;
@@ -58,12 +60,16 @@ namespace Bsa.Msa.Common.Repeaters
 
 		private Timer _timer;
 
+		private string _name;
+
 		private readonly CancellationTokenSource _cancellationTokenSource;
 
-		public DisallowConcurrentModeRepeater(ICommandSettings commandSettings)
+		public DisallowConcurrentModeRepeater(ICommandSettings commandSettings, ILocalLogger logger = null)
 		{
+			_logger = logger;
 			this._dueTime = commandSettings.DueTime;
 			this._period = commandSettings.Period;
+			_name = commandSettings.Name;
 			this._cancellationTokenSource = new CancellationTokenSource();
 		}
 
@@ -79,7 +85,7 @@ namespace Bsa.Msa.Common.Repeaters
 		public void Start(Action<CancellationToken> onRepeat)
 		{
 			if (onRepeat == null)
-				throw new ArgumentNullException("onRepeat");
+				throw new ArgumentNullException($"onRepeat {_name}");
 
 			this._operationsQueue = new OperationsQueue(MaxQueueLength, onRepeat);
 
@@ -104,7 +110,7 @@ namespace Bsa.Msa.Common.Repeaters
 				if (_isProcessing)
 					return;
 
-				
+
 				_isProcessing = true;
 				Action<CancellationToken> operation = this._operationsQueue.Dequeue();
 				while (null != operation)
@@ -115,13 +121,19 @@ namespace Bsa.Msa.Common.Repeaters
 					}
 					catch (Exception e)
 					{
+						_logger?.Error($"Name:{_name};Message:{e.Message}", e);
 						RaiseError(e);
 					}
+
 					operation = this._operationsQueue.Dequeue();
 				}
+
 				_isProcessing = false;
 			}
-			catch { }
+			catch (Exception ex)
+			{
+				_logger?.Error($"Name:{_name};Message:{ex.Message}", ex);
+			}
 
 		}
 

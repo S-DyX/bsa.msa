@@ -102,7 +102,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				{
 					_logger?.Info($"Create model {name}");
 					if (!IsConnected)
-						Reconnect();
+						Reconnect(name);
 					retryCount++;
 					if (retryCount > 10)
 					{ 
@@ -320,13 +320,13 @@ namespace Bsa.Msa.RabbitMq.Core
 			}
 		}
 
-		public void Reconnect()
+		public void Reconnect(string? name = null)
 		{
 			if (!IsConnected)
 			{
 				lock (_sync)
 				{
-					_logger?.Info("Reconnect");
+					_logger?.Info($"Reconnect {name}");
 
 					if (ConnectionFactory.AutomaticRecoveryEnabled)
 					{

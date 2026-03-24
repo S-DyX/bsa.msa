@@ -26,7 +26,7 @@ namespace Bsa.Msa.Example.Host.Handlers
 		}
 		public void Handle(ReindexMessage message)
 		{
-			message.Body = new string('c', 19698984);
+			message.Body = new string('c', 29698984);
 			_busManager.Publish(message);
 		}
 	}

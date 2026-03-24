@@ -1,6 +1,7 @@
 ﻿using Bsa.Msa.Common.Services.Commands;
 using System;
 using System.Threading;
+using System.Xml.Linq;
 
 namespace Bsa.Msa.Common.Repeaters
 {
@@ -23,6 +24,7 @@ namespace Bsa.Msa.Common.Repeaters
 	public sealed class AllowConcurrenceModeRepeater : IRepeater
 	{
 		private readonly ICommandSettings _commandSettings;
+		private readonly ILocalLogger _logger;
 		private readonly TimeSpan _dueTime;
 
 		private readonly TimeSpan _period;
@@ -32,14 +34,15 @@ namespace Bsa.Msa.Common.Repeaters
 		private Timer _timer;
 
 		private bool _isStarted = false;
-
+		private string _name;
 		private Action<CancellationToken> _repeatAction;
-		public AllowConcurrenceModeRepeater(ICommandSettings commandSettings)
+		public AllowConcurrenceModeRepeater(ICommandSettings commandSettings, ILocalLogger logger = null)
 		{
 			_commandSettings = commandSettings;
+			_logger = logger;
 			this._dueTime = commandSettings.DueTime;
 			this._period = commandSettings.Period;
-
+			_name = commandSettings.Name;
 			this._cancellationTokenSource = new CancellationTokenSource();
 		}
 
@@ -94,6 +97,8 @@ namespace Bsa.Msa.Common.Repeaters
 			}
 			catch (Exception e)
 			{
+				_logger?.Error($"Name:{_name};Message:{e.Message}", e);
+
 				if (Error != null)
 					Error(this, new UnhandledExceptionEventArgs(e, false));
 			}

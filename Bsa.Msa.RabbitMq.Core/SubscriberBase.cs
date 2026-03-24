@@ -69,7 +69,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				catch (System.IO.EndOfStreamException endOfStreamException)
 				{
 					Thread.Sleep(200);
-					_simpleBus.Reconnect();
+					_simpleBus.Reconnect(_messageHandlerSettings.Type);
 					_logger?.Error($"EndOfStreamException subscription: {_messageHandlerSettings.Type}", endOfStreamException);
 				}
 				catch (Exception ex)

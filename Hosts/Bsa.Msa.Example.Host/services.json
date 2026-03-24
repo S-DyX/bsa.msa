@@ -40,18 +40,24 @@
     {
       "name": "serviceUseQueue",
       "commands": [
+        //{
+        //        "name": "testCommandEx2",
+        //        "type": "ExampleCommand",
+        //        "fileName": "some.txt",
+        //        "period": "00:00:01"
+        //      },
         {
-                "name": "testCommandEx",
-                "type": "ExampleCommand",
-                "fileName": "some.txt",
-                "period": "00:01:01"
-              },
-          {
-            "name": "SimpleExampleCommand",
-            "type": "SimpleExampleCommand",
-            "period": "00:01:05"
-            //"start": "14:49:30"
-          }
+          "name": "ReindexCommand",
+          "type": "ReindexCommand",
+          "fileName": "some.txt",
+          "period": "00:05:00"
+        }
+          //{
+          //  "name": "SimpleExampleCommand",
+          //  "type": "SimpleExampleCommand",
+          //  "period": "00:01:05"
+          //  //"start": "14:49:30"
+          //}
           //{
           //  "name": "testCommand",
           //  "type": "ExampleCommand",
@@ -61,24 +67,25 @@
           //}
       ],
       "handlers": [
-        {
+        //{
 
-          "name": "NothingToDoMessageHandler",
-          "type": "ExampleExceptionMessageHandler",
-          "subscriptionEndpoint": "test.queue4",
-          "degreeOfParallelism": 11,
-          "retryCount": 2,
-          //"useExchange": true,
-          "retry": true
+        //  "name": "NothingToDoMessageHandler",
+        //  "type": "ExampleExceptionMessageHandler",
+        //  "subscriptionEndpoint": "test.queue4",
+        //  "degreeOfParallelism": 11,
+        //  "retryCount": 2,
+        //  //"useExchange": true,
+        //  "retry": true
 
-        },
+        //},
         {
-          "name": "ExampleExceptionMessageHandler",
-          "type": "ExampleExceptionMessageHandler",
-          "subscriptionEndpoint": "test.queue4",
-          "degreeOfParallelism": 11,
+          "name": "ReindexMessageHandler",
+          "type": "ReindexMessageHandler",
+          "subscriptionEndpoint": "test.queue11",
+          "degreeOfParallelism": 1,
           "retryCount": 2,
-          //"useExchange": true,
+          "clearAfterStart": "true",
+          "useExchange": true,
           "retry": true
         },
         {
@@ -87,7 +94,8 @@
           "type": "EmptyMessageHandlerAsync",
           "subscriptionEndpoint": "test.queue3",
           "useExchange": true,
-          "degreeOfParallelism": 22
+          "degreeOfParallelism": 0,
+          "clearAfterStart": "true"
         },
         {
           "name": "EmptyMessageHandler",
@@ -95,7 +103,7 @@
           "type": "EmptyMessageHandler",
           "subscriptionEndpoint": "test.queue13",
           "useExchange": true,
-          "degreeOfParallelism": 11
+          "degreeOfParallelism": 0
         },
         {
 
@@ -104,7 +112,7 @@
           "subscriptionEndpoint": "test.timeout",
           "useExchange": true,
           "clearAfterStart": true,
-          "degreeOfParallelism": 3
+          "degreeOfParallelism": 0
 
         }
         // ,
