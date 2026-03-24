@@ -8,13 +8,15 @@ using Bsa.Msa.Common;
 
 namespace Bsa.Msa.DependencyInjection
 {
-    /// <summary>
-    /// <see cref="ILocalLogger"/>
-    /// </summary>
-    public sealed class LocalLogger : ILocalLogger
+	/// <inheritdoc />
+	public sealed class LocalLogger : ILocalLogger
     {
         private readonly ILogger _logger;
 
+        /// <summary>
+        /// Ctor
+        /// </summary>
+        /// <param name="loggerFactory"></param>
         public LocalLogger(ILoggerFactory loggerFactory)
         {
             _logger = loggerFactory.CreateLogger("Rabbit");

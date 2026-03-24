@@ -12,11 +12,13 @@ namespace Bsa.Msa.Common.Services.Impl
 	{
 		private readonly IHandlerRegistry registry;
 		private readonly ILocalContainer _localContainer;
+		private readonly ILocalLogger _localLogger;
 
-		public MessageHandlerFactory(IHandlerRegistry registry, ILocalContainer localContainer)
+		public MessageHandlerFactory(IHandlerRegistry registry, ILocalContainer localContainer, ILocalLogger localLogger = null)
 		{
 			this.registry = registry;
 			this._localContainer = localContainer;
+			_localLogger = localLogger;
 		}
 		public IMessageHandler Create<TMessage>(string type, ISettings settings, ISimpleBus simpleBus, ILocalBus localBus)
 		{
@@ -48,15 +50,24 @@ namespace Bsa.Msa.Common.Services.Impl
 					}
 					else
 					{
-						var inst = _localContainer.Resolve(p.ParameterType);
-						if (inst != null)
+						try
 						{
-							result.Add(inst);
+							var inst = _localContainer.Resolve(p.ParameterType);
+							if (inst != null)
+							{
+								result.Add(inst);
+							}
+							else
+							{
+								throw new InvalidOperationException($"type not found {p.ParameterType}");
+							}
 						}
-						else
+						catch (Exception e)
 						{
-							throw new InvalidOperationException($"type not found {p.ParameterType}");
+							_localLogger?.Error($"Type can not be resolved:{p.ParameterType};Message:{e.Message}", e);
+							throw;
 						}
+						
 					}
 				}
 			}
