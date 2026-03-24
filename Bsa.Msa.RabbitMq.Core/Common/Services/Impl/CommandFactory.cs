@@ -8,16 +8,24 @@ using System.Threading;
 
 namespace Bsa.Msa.Common.Services.Impl
 {
+	/// <inheritdoc />
 	public sealed class CommandFactory : ICommandFactory
 	{
 		private readonly ICommandRegistry commandRegistry;
 		private readonly ILocalContainer localContainer;
 
-		public CommandFactory(ICommandRegistry commandRegistry, ILocalContainer localContainer)
+		/// <summary>
+		/// Ctor
+		/// </summary>
+		/// <param name="commandRegistry"></param>
+		/// <param name="localContainer"></param>
+		public CommandFactory(ICommandRegistry commandRegistry, ILocalContainer localContainer = null)
 		{
 			this.commandRegistry = commandRegistry;
 			this.localContainer = localContainer;
 		}
+
+		/// <inheritdoc />
 		public ICommand Create(string commandType, ISettings settings, CancellationToken cancellationToken)
 		{
 			var handlerType = commandRegistry.Resolve(commandType);

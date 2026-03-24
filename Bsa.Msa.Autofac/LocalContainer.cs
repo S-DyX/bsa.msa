@@ -18,7 +18,7 @@ namespace Bsa.Msa.Autofac
 		/// </summary>
 		/// <param name="serviceProvider"></param>
 		/// <param name="localLogger"></param>
-		public LocalContainer(IServiceProvider serviceProvider, ILocalLogger localLogger)
+		public LocalContainer(IServiceProvider serviceProvider, ILocalLogger localLogger = null)
 		{
 			this._serviceProvider = serviceProvider;
 			_localLogger = localLogger;

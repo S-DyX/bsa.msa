@@ -171,3 +171,4 @@ namespace Bsa.Msa.Common
 		/// </example>
 		void Debug(string message);
 	}
+}
