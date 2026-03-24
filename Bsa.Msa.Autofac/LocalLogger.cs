@@ -1,56 +1,66 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Bsa.Msa.Common;
+using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Bsa.Msa.Common;
 
 namespace Bsa.Msa.DependencyInjection
 {
 	/// <inheritdoc />
 	public sealed class LocalLogger : ILocalLogger
-    {
-        private readonly ILogger _logger;
+	{
+		private readonly ILogger _logger;
 
-        /// <summary>
-        /// Ctor
-        /// </summary>
-        /// <param name="loggerFactory"></param>
-        public LocalLogger(ILoggerFactory loggerFactory)
-        {
-            _logger = loggerFactory.CreateLogger("Rabbit");
-        }
+		/// <summary>
+		/// Ctor
+		/// </summary>
+		/// <param name="loggerFactory"></param>
+		public LocalLogger(ILoggerFactory loggerFactory)
+		{
+			_logger = loggerFactory.CreateLogger("Rabbit");
+		}
 
-        public void Warn(string message)
-        {
-            _logger.LogWarning(message);
-        }
+		/// <inheritdoc />
+		public void Warn(string message)
+		{
+			_logger.LogWarning(message);
+		}
 
-        public void Error(string message)
-        {
-            _logger.LogError(message);
-        }
+		/// <inheritdoc />
+		public void Error(string message)
+		{
+			_logger.LogError(message);
+		}
 
-        public void Error(string text, Exception ex)
-        {
-            _logger.LogError(ex, text);
-        }
+		/// <inheritdoc />
+		public void Error(string text, Exception ex)
+		{
+			_logger.LogError(ex, text);
+		}
 
-        public void Info(string message)
-        {
-            _logger.LogInformation(message);
-        }
+		/// <inheritdoc />
+		public void Info(string message)
+		{
+			_logger.LogInformation(message);
+		}
 
-        public void Debug(string message)
-        {
-            _logger.LogDebug(message);
-        }
+		/// <inheritdoc />
+		public void Debug(string message)
+		{
+			_logger.LogDebug(message);
+		}
 
-        public bool IsErrorEnabled { get; }
-        public bool IsDebugEnabled { get; }
-        public bool IsFatalEnabled { get; }
-        public bool IsInfoEnabled { get; }
-        public bool IsWarnEnabled { get; }
-    }
+		/// <inheritdoc />
+		public bool IsErrorEnabled { get; }
+
+		/// <inheritdoc />
+		public bool IsDebugEnabled { get; }
+
+		/// <inheritdoc />
+		public bool IsFatalEnabled { get; }
+
+		/// <inheritdoc />
+		public bool IsInfoEnabled { get; }
+
+		/// <inheritdoc />
+		public bool IsWarnEnabled { get; }
+	}
 }
