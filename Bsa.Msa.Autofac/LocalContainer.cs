@@ -53,10 +53,9 @@ namespace Bsa.Msa.Autofac
 				{
 					foreach (var r in _provider.LifetimeScope.ComponentRegistry.Registrations)
 					{
-						foreach (TypedService s in r.Services)
+						foreach (var s in r.Services)
 						{
-							if (s == null)
-								continue;
+
 
 							// Check if provider is still valid
 							if (_provider?.LifetimeScope == null)
@@ -67,8 +66,9 @@ namespace Bsa.Msa.Autofac
 
 							if (s.Description.Equals(type.FullName))
 							{
-								var temp = _serviceProvider.GetService(s.ServiceType);
-								return temp;
+								var result = ResolveService(s);
+								if (result != null)
+									return result;
 							}
 						}
 
@@ -84,6 +84,41 @@ namespace Bsa.Msa.Autofac
 			}
 
 			return service;
+		}
+
+		private object ResolveService(Service s)
+		{
+			try
+			{
+				var ts = s as TypedService;
+				if (ts != null)
+				{
+					return _serviceProvider.GetService(ts.ServiceType);
+				}
+
+			}
+			catch (Exception e)
+			{
+				_localLogger?.Error($"Attempted to resolve {s.Description} from disposed lifetime scope. " +
+				                    $"Check that the scope is properly managed and not disposed too early.", e);
+			}
+			try
+			{
+				var ks = s as KeyedService;
+				if (ks != null)
+				{
+					return _serviceProvider.GetService(ks.ServiceType);
+				}
+
+			}
+			catch (Exception e)
+			{
+				_localLogger?.Error($"Attempted to resolve {s.Description} from disposed lifetime scope. " +
+				                    $"Check that the scope is properly managed and not disposed too early.", e);
+			}
+		
+
+			return null;
 		}
 	}
 }
