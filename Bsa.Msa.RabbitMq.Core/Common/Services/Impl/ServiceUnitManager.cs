@@ -5,6 +5,7 @@ using Bsa.Msa.Common.Services.MessageHandling;
 using Bsa.Msa.Common.Services.Settings;
 using Bsa.Msa.RabbitMq.Core;
 using Bsa.Msa.RabbitMq.Core.Common;
+using Bsa.Msa.RabbitMq.Core.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,8 +14,10 @@ using System.Threading.Tasks;
 
 namespace Bsa.Msa.Common.Services.Impl
 {
+	/// <inheritdoc />
 	public sealed class ServiceUnitManager : IServiceUnitManager
 	{
+		private readonly ISimpleBus _simpleBus;
 		private readonly IServicesSettings _servicesSection;
 		private readonly ICommandFactory _commandFactory;
 		private readonly IRepeaterFactory _repeaterFactory;
@@ -22,21 +25,46 @@ namespace Bsa.Msa.Common.Services.Impl
 		private readonly ILocalLogger _logger;
 		private readonly IMessageHandlerFactory _messageHandlerFactory;
 		private readonly List<ISubscriber> _subscribers = new List<ISubscriber>();
+		private readonly List<MessageHandlerSettings> _deleteQueue = new List<MessageHandlerSettings>();
 		private readonly List<IServiceUnit> _serviceUnits = new List<IServiceUnit>();
 		private bool _isStart = false;
 		private readonly InternalBus _internalBus;
 		private readonly Thread _thread;
-		public ServiceUnitManager(IServicesSettings servicesSection,
 
+		/// <summary>
+		/// Ctor
+		/// </summary>
+		/// <param name="servicesSection"></param>
+		/// <param name="simpleBus"></param>
+		/// <param name="commandFactory"></param>
+		/// <param name="repeaterFactory"></param>
+		/// <param name="subscriberFactory"></param>
+		/// <param name="messageHandlerFactory"></param>
+		public ServiceUnitManager(IServicesSettings servicesSection,
+			ISimpleBus simpleBus,
 			ICommandFactory commandFactory,
 			IRepeaterFactory repeaterFactory,
 			ISubscriberFactory subscriberFactory,
 			IMessageHandlerFactory messageHandlerFactory)
-		: this(servicesSection, commandFactory, repeaterFactory, subscriberFactory, messageHandlerFactory, null, null)
+		: this(servicesSection, simpleBus, commandFactory, repeaterFactory, subscriberFactory, messageHandlerFactory, null, null)
 		{
+			_simpleBus = simpleBus;
 		}
 
+		/// <summary>
+		/// Ctor
+		/// </summary>
+		/// <param name="servicesSection"></param>
+		/// <param name="simpleBus"></param>
+		/// <param name="commandFactory"></param>
+		/// <param name="repeaterFactory"></param>
+		/// <param name="subscriberFactory"></param>
+		/// <param name="messageHandlerFactory"></param>
+		/// <param name="serializeService"></param>
+		/// <param name="localLogger"></param>
+		/// <exception cref="ArgumentNullException"></exception>
 		public ServiceUnitManager(IServicesSettings servicesSection,
+			ISimpleBus simpleBus,
 			ICommandFactory commandFactory,
 			IRepeaterFactory repeaterFactory,
 			ISubscriberFactory subscriberFactory,
@@ -90,6 +118,8 @@ namespace Bsa.Msa.Common.Services.Impl
 				}
 			}
 		}
+
+		/// <inheritdoc />
 		public void Start()
 		{
 			_logger?.Info($"Start load local bus");
@@ -116,6 +146,10 @@ namespace Bsa.Msa.Common.Services.Impl
 			}
 
 			_logger?.Info($"End load services {services.Length}");
+			Parallel.ForEach(_deleteQueue, new ParallelOptions() { MaxDegreeOfParallelism = 2 }, x =>
+			{
+				_subscriberFactory.Delete(x);
+			});
 			Parallel.ForEach(_serviceUnits, new ParallelOptions(){MaxDegreeOfParallelism = 2}, x =>
 			{
 				x.Start();
@@ -126,17 +160,6 @@ namespace Bsa.Msa.Common.Services.Impl
 			});
 		}
 
-		private void Create(MessageHandlerSettings handler)
-		{
-			for (var index = 0; index < handler.DegreeOfParallelism; index++)
-			{
-				var sub = _subscriberFactory.Create(handler.Type, handler, _messageHandlerFactory);
-				sub.OnError += HandleServiceUnitError;
-				_subscribers.Add(sub);
-
-			}
-			_logger?.Info($"Created: Subscriber:{handler.Type}, Count:{handler.DegreeOfParallelism}");
-		}
 		private void CreateNew(MessageHandlerSettings handler)
 		{
 			try
@@ -145,11 +168,15 @@ namespace Bsa.Msa.Common.Services.Impl
 				{
 					//for (var index = 0; index < handler.DegreeOfParallelism; index++)
 					{
-						var sub = _subscriberFactory.Create(handler.Type, handler, _messageHandlerFactory);
+						var sub = _subscriberFactory.Create(handler, _messageHandlerFactory);
 						sub.OnError += HandleServiceUnitError;
 						_subscribers.Add(sub);
 
 					}
+				}
+				else
+				{
+					_deleteQueue.Add(handler);
 				}
 			}
 			catch (Exception e)
@@ -160,6 +187,8 @@ namespace Bsa.Msa.Common.Services.Impl
 
 			_logger?.Info($"Created: Subscriber:{handler.Type}, Count:{handler.DegreeOfParallelism}");
 		}
+
+		/// <inheritdoc />
 		public void Stop()
 		{
 			foreach (var sub in _serviceUnits)
@@ -175,17 +204,7 @@ namespace Bsa.Msa.Common.Services.Impl
 			_isStart = false;
 		}
 
-		//private IEnumerable<IServiceUnit> CreateProcessingUnits(MessageHandlerSettings settings)
-		//{
-		//	for (var index = 0; index < settings.DegreeOfParallelism; index++)
-		//	{
-		//		var type = typeof(IServiceUnit).Name + "." + settings.Type;
-		//		var serviceUnit = _messageHandlingServiceUnitFactory.Create(type, settings);
-		//		serviceUnit.OnError += HandleServiceUnitError;
-		//		yield return serviceUnit;
-		//	}
-		//}
-
+		/// <inheritdoc />
 		public event UnhandledExceptionEventHandler OnError;
 
 		private void HandleServiceUnitError(object sender, UnhandledExceptionEventArgs e)
@@ -195,11 +214,11 @@ namespace Bsa.Msa.Common.Services.Impl
 			OnError?.Invoke(sender, e);
 		}
 
-
+		/// <inheritdoc />
 		public void Paused()
 		{
 		}
-
+		/// <inheritdoc />
 		public void Continued()
 		{
 		}

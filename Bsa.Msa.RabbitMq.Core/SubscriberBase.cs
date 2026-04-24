@@ -7,6 +7,7 @@ using System.Threading;
 
 namespace Bsa.Msa.RabbitMq.Core
 {
+	/// <inheritdoc />
 	public sealed class SubscriberBase<TMessage> : ISubscriber where TMessage : class
 	{
 
@@ -56,6 +57,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			using (_subscribers) { }
 		}
 
+		/// <inheritdoc />
 		public void Start()
 		{
 			_isInit = false;
@@ -69,6 +71,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				catch (System.IO.EndOfStreamException endOfStreamException)
 				{
 					Thread.Sleep(200);
+
 					_simpleBus.Reconnect(_messageHandlerSettings.Type);
 					_logger?.Error($"EndOfStreamException subscription: {_messageHandlerSettings.Type}", endOfStreamException);
 				}
@@ -136,7 +139,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		}
 
 
-
+		/// <inheritdoc />
 		public void Stop()
 		{
 			_logger?.Info($"Stop subscriber {_messageHandlerSettings.SubscriptionEndpoint}");

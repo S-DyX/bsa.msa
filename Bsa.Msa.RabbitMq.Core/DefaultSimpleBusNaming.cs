@@ -9,6 +9,11 @@ namespace Bsa.Msa.RabbitMq.Core
 {
 	internal sealed class DefaultSimpleBusNaming : ISimpleBusNaming
 	{
+		public string GetQueueName(Type type)
+		{
+			return SimpleBusExtension.GetQueueName(type);
+		}
+
 		public string GetQueueName<TMessage>()
 		{
 			return SimpleBusExtension.GetQueueName<TMessage>();
@@ -19,11 +24,19 @@ namespace Bsa.Msa.RabbitMq.Core
 			return SimpleBusExtension.GetExchangeName<TMessage>();
 		}
 	}
+
+	/// <inheritdoc />
 	public sealed class EasyNetQSimpleBusNaming : ISimpleBusNaming
 	{
+		/// <inheritdoc />
 		public string GetQueueName<TMessage>()
 		{
 			var type = typeof(TMessage);
+			return GetQueueName(type);
+		}
+		/// <inheritdoc />
+		public string GetQueueName(Type type)
+		{
 			var fullName = type.FullName;
 			if (type.IsGenericType && !string.IsNullOrEmpty(fullName))
 			{
@@ -33,9 +46,11 @@ namespace Bsa.Msa.RabbitMq.Core
 					fullName.Remove(index);
 				}
 			}
+
 			return $"{fullName}, {type.Assembly.GetName().Name}";
 		}
 
+		/// <inheritdoc />
 		public string GetExchangeName<TMessage>()
 		{
 			var queueName = $"{GetQueueName<TMessage>()}";
