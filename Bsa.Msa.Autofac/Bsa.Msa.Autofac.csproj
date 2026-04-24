@@ -13,7 +13,7 @@ http://bsasearch.org/msa.html</Description>
     <PackageTags>MSA Rabbit MQ RabbiMQ RMQ Bsa.Msa.RabbitMq.Core Bsa</PackageTags>
     <PackageReleaseNotes>Restore connection after error: Already closed: The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=406, text='PRECONDITION_FAILED - message size 17698984 is larger than configured max size 16777216'</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>9.0.61</Version>
+    <Version>9.0.67</Version>
     <AssemblyVersion></AssemblyVersion>
     <Authors>Stanislav Batyrgareev</Authors>
     <FileVersion></FileVersion>
@@ -22,8 +22,8 @@ http://bsasearch.org/msa.html</Description>
 
   <ItemGroup>
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="9.0.0" />
-    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="9.0.61" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.13" />
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="9.0.67" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.15" />
   </ItemGroup>
 
 </Project>
