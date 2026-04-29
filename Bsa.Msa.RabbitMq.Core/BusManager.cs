@@ -5,17 +5,28 @@ using Bsa.Msa.RabbitMq.Core.Settings;
 
 namespace Bsa.Msa.RabbitMq.Core
 {
+	/// <inheritdoc />
 	public sealed class BusManager : IBusManager
 	{ 
 		private readonly ISimpleBus _simpleBus;
 		private readonly ILocalBus _localBus;
 		private readonly object _sync = new object();
 
+		/// <summary>
+		/// Ctor
+		/// </summary>
+		/// <param name="simpleBus"></param>
+		/// <param name="localBus"></param>
 		public BusManager(ISimpleBus simpleBus, ILocalBus localBus)
 		{ 
 			_simpleBus = simpleBus;
 			_localBus = localBus;
 		}
+
+		/// <summary>
+		/// Ctor
+		/// </summary>
+		/// <param name="simpleBus"></param>
 		public BusManager(ISimpleBus simpleBus)
 		{ 
 			_simpleBus = simpleBus;
@@ -33,13 +44,13 @@ namespace Bsa.Msa.RabbitMq.Core
 			}
 		}
 
-
 		public void SendSelf<TMessage>(TMessage message) where TMessage : class
 		{
 			Bus.SendSelf(message);
 		}
 
-		public void Send<TMessage>(string queue, TMessage message, bool forceSend) where TMessage : class
+		/// <inheritdoc />
+		public void Send<TMessage>(string queue, TMessage message, int? ttl = null, bool forceSend = false) where TMessage : class
 		{
 			try
 			{
@@ -50,7 +61,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				else
 				{
 					if (forceSend || _localBus == null || !_localBus.Handle(queue, message))
-						Bus.Send<TMessage>(queue, message);
+						Bus.Send<TMessage>(queue, message, ttl);
 				}
 			}
 			catch (Exception)
@@ -61,18 +72,20 @@ namespace Bsa.Msa.RabbitMq.Core
 				}
 				else
 				{
-					Bus.Send<TMessage>(queue, message);
+					Bus.Send<TMessage>(queue, message, ttl);
 				}
 			}
 		}
 
+		/// <inheritdoc />
 		public void Publish<TMessage>(TMessage message) where TMessage : class
 		{
 			Bus.Publish<TMessage>(message);
 		}
 
-		
 
+
+		/// <inheritdoc />
 		public void Delete<TMessage>(string queue) where TMessage : class
 		{
 			Bus.Delete<TMessage>(queue);
@@ -83,28 +96,31 @@ namespace Bsa.Msa.RabbitMq.Core
 			Bus.Delete<TMessage>();
 		}
 
+		/// <inheritdoc />
 		public void Delete(string queue)
 		{
 			Bus.Delete(queue);
 		}
 
+		/// <inheritdoc />
 		public void Publish<TMessage>(TMessage message, string topic, string exchangeName = null) where TMessage : class
 		{
 			Bus.Publish<TMessage>(message, topic, exchangeName);
 		}
 
-		public void Send<TMessage>(TMessage message) where TMessage : class
+		/// <inheritdoc />
+		public void Send<TMessage>(TMessage message, int? ttl = null) where TMessage : class
 		{
-			Send(string.Empty, message, false);
+			Send(string.Empty, message, ttl,false);
 		}
 
-
+		/// <inheritdoc />
 		public List<TMessage> GetMessageExchange<TMessage>(string queueName, int count)
 		{
 			return Bus.GetMessageExchange<TMessage>(queueName, count);
 		}
 
-	
+		/// <inheritdoc />
 		public IDisposable Respond<TRequest, TResponse>(Func<TRequest, TResponse> response)
 			where TRequest : class
 			where TResponse : class
@@ -112,6 +128,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			return Bus.Respond<TRequest, TResponse>(response);
 		}
 
+		/// <inheritdoc />
 		public IDisposable Respond<TRequest, TResponse>(Func<TRequest, TResponse> response, string queueName)
 			where TRequest : class
 			where TResponse : class
@@ -120,7 +137,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		}
 
 
-
+		/// <inheritdoc />
 		public void Dispose()
 		{
 			using (Bus)
@@ -129,7 +146,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			}
 		}
 
-
+		/// <inheritdoc />
 		public List<TMessage> GetMessageExchange<TMessage>(string queueName)
 		{
 			return Bus.GetMessageExchange<TMessage>(queueName);

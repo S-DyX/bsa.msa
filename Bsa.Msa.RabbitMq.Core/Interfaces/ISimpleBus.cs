@@ -49,7 +49,8 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		/// </summary>
 		/// <typeparam name="TMessage"></typeparam>
 		/// <param name="message"></param>
-		void Send<TMessage>(TMessage message) where TMessage : class;
+		/// <param name="ttl">time to live</param>
+		void Send<TMessage>(TMessage message, int? ttl = null) where TMessage : class;
 
 		/// <summary>
 		/// Send message to queue
@@ -57,7 +58,8 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		/// <typeparam name="TMessage"></typeparam>
 		/// <param name="queue"></param>
 		/// <param name="message"></param>
-		void Send<TMessage>(string queue, TMessage message) where TMessage : class;
+		/// <param name="ttl">time to live</param>
+		void Send<TMessage>(string queue, TMessage message, int? ttl = null) where TMessage : class;
 
 		/// <summary>
 		/// Publish to exchange

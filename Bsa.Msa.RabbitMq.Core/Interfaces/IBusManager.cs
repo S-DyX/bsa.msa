@@ -35,6 +35,7 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		/// </summary>
 		/// <typeparam name="TMessage">The type of message to send. Must be a reference type (class).</typeparam>
 		/// <param name="message">The message instance to send. Will be serialized (typically as JSON).</param>
+		/// <param name="ttl">ms</param>
 		/// <exception cref="ArgumentNullException">Thrown when the message is null.</exception>
 		/// <exception cref="InvalidOperationException">Thrown when no queue is configured for the message type, the connection is closed, or the channel is unavailable.</exception>
 		/// <exception cref="RabbitMQ.Client.Exceptions.OperationInterruptedException">Thrown when the RabbitMQ connection is interrupted during the operation.</exception>
@@ -58,7 +59,7 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		/// </code>
 		/// </example>
 		/// </remarks>
-		void Send<TMessage>(TMessage message) where TMessage : class;
+		void Send<TMessage>(TMessage message, int? ttl = null) where TMessage : class;
 
 		/// <summary>
 		/// Sends a message to a specific RabbitMQ queue, optionally forcing the send even if the queue doesn't exist.
@@ -67,6 +68,7 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		/// <typeparam name="TMessage">The type of message to send. Must be a reference type (class).</typeparam>
 		/// <param name="queue">The name of the target RabbitMQ queue.</param>
 		/// <param name="message">The message instance to send.</param>
+		/// <param name="ttl">ms</param>
 		/// <param name="forceSend">When true, attempts to send even if the queue hasn't been declared; when false, ensures queue exists before sending.</param>
 		/// <exception cref="ArgumentNullException">Thrown when the message or queue name is null.</exception>
 		/// <exception cref="ArgumentException">Thrown when the queue name is empty or whitespace.</exception>
@@ -97,7 +99,7 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		/// </code>
 		/// </example>
 		/// </remarks>
-		void Send<TMessage>(string queue, TMessage message, bool forceSend = false) where TMessage : class;
+		void Send<TMessage>(string queue, TMessage message, int? ttl = null, bool forceSend = false) where TMessage : class;
 
 		/// <summary>
 		/// Publishes a message to the default exchange configured for the message type.

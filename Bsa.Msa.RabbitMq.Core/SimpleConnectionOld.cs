@@ -254,7 +254,7 @@ namespace Bsa.Msa.RabbitMq.Core
 					_logger?.Error(ex.ToString(), ex);
 					if (ignoreException)
 						break;
-					Task.Delay(1000);
+					Thread.Sleep(1000);
 				}
 			}
 

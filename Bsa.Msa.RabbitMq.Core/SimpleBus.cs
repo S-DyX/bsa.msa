@@ -14,11 +14,11 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using static System.Collections.Specialized.BitVector32;
 
 namespace Bsa.Msa.RabbitMq.Core
 {
-	public class SimpleBus : ISimpleBus
+	/// <inheritdoc />
+	public sealed class SimpleBus : ISimpleBus
 	{
 		private readonly ISimpleConnection _simpleConnection;
 		private readonly ILocalLogger _logger;
@@ -28,6 +28,14 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		private int _treadCount = 0;
 		private readonly object _lock = new object();
+
+		/// <summary>
+		/// Ctor
+		/// </summary>
+		/// <param name="simpleConnection"></param>
+		/// <param name="logger"></param>
+		/// <param name="serializeService"></param>
+		/// <param name="busNaming"></param>
 		public SimpleBus(ISimpleConnection simpleConnection, ILocalLogger logger, ISerializeService serializeService, ISimpleBusNaming busNaming)
 		{
 			_simpleConnection = simpleConnection;
@@ -36,14 +44,32 @@ namespace Bsa.Msa.RabbitMq.Core
 			_serializeService = serializeService ?? new SerializeService();
 			_internalBus = InternalBus.Create(_serializeService, logger);
 		}
+
+		/// <summary>
+		/// Ctor
+		/// </summary>
+		/// <param name="simpleConnection"></param>
+		/// <param name="logger"></param>
+		/// <param name="busNaming"></param>
 		public SimpleBus(ISimpleConnection simpleConnection, ILocalLogger logger, ISimpleBusNaming busNaming)
 			: this(simpleConnection, logger, null, busNaming)
 		{
 		}
+
+		/// <summary>
+		/// Ctor
+		/// </summary>
+		/// <param name="simpleConnection"></param>
+		/// <param name="busNaming"></param>
 		public SimpleBus(ISimpleConnection simpleConnection, ISimpleBusNaming busNaming)
 			: this(simpleConnection, null, null, busNaming)
 		{
 		}
+
+		/// <summary>
+		/// Ctor
+		/// </summary>
+		/// <param name="simpleConnection"></param>
 		public SimpleBus(ISimpleConnection simpleConnection)
 		 : this(simpleConnection, null, null, null)
 		{
@@ -65,6 +91,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		private IMessageHandlerSettings _messageHandlerSettings;
 		private string _queueName;
 
+		/// <inheritdoc />
 		public void Subscribe<TMessage>(string queueName, Action<TMessage> action, IMessageHandlerSettings messageHandlerSettings)
 		{
 			_messageHandlerSettings = messageHandlerSettings;
@@ -72,7 +99,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				queueName = $"{queueName}_{Guid.NewGuid()}";
 			Action<Func<IModel>> configureAction = getChannel =>
 			{
-				var dictionary = GetArguments(messageHandlerSettings);
+				var dictionary = GetArguments(messageHandlerSettings.Ttl);
 				getChannel().QueueDeclare(queueName, true, false, messageHandlerSettings.AutoDelete, dictionary);
 				getChannel().BasicQos(0, messageHandlerSettings.PrefetchCount, false);
 			};
@@ -82,32 +109,35 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		}
 
+		/// <inheritdoc />
 		public Action Shutdown { get; set; }
 
-		private static IDictionary<string, object> GetArguments(IMessageHandlerSettings messageHandlerSettings)
+		private static IDictionary<string, object> GetArguments(int? ttl)
 		{
 			IDictionary<string, object> arguments = new Dictionary<string, object>(0);
-			if (messageHandlerSettings.Ttl.HasValue)
+			if (ttl.HasValue)
 			{
 				arguments = new ConcurrentDictionary<string, object>();
-				arguments["x-message-ttl"] = messageHandlerSettings.Ttl.Value;
+				arguments["x-message-ttl"] = ttl.Value;
 			}
+
 			return arguments;
 		}
 
-
+		/// <inheritdoc />
 		public void SubscribeExchange<TMessage>(string queueName, Action<TMessage> action, IMessageHandlerSettings messageHandlerSettings)
 		{
 			_messageHandlerSettings = messageHandlerSettings;
 			if (messageHandlerSettings.AppendGuid)
 				queueName = $"{queueName}_{Guid.NewGuid()}";
-			
+
 
 			Consume<TMessage>(queueName, action, GetExchangeConfigure<TMessage>(queueName, messageHandlerSettings));
 
 
 		}
 
+		/// <inheritdoc />
 		public void SendSelf<TMessage>(TMessage message) where TMessage : class
 		{
 			if (string.IsNullOrEmpty(_queueName))
@@ -178,7 +208,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			if (settings != null)
 			{
 				routingKey = settings.RoutingKey;
-				dictionary = GetArguments(settings);
+				dictionary = GetArguments(settings.Ttl);
 			}
 			var type = fanout;
 			if (!string.IsNullOrEmpty(routingKey))
@@ -205,58 +235,6 @@ namespace Bsa.Msa.RabbitMq.Core
 			return action;
 		}
 
-		public void Delete<TMessage>() where TMessage : class
-		{
-			_logger?.Info($"Delete");
-			var exchangeName = _busNaming.GetExchangeName<TMessage>();
-			_simpleConnection.Configure(exchangeName, getChannel =>
-			{
-				getChannel().ExchangeDelete(exchangeName, true);
-			});
-		}
-
-		public List<TMessage> GetMessageExchange<TMessage>(string queueName)
-		{
-			//int take = 20;
-
-			//var result = new ConcurrentBag<TMessage>();
-			//ConfigureExchange<TMessage>(queueName, null);
-
-			////_simpleConnection.
-			//_simpleConnection.Execute(getChannel =>
-			//{
-			//	for (int i = 0; i < take; i++)
-			//	{
-			//		TMessage data;
-			//		if (TryGetMessage(queueName, getChannel, out data))
-			//			result.Add(data);
-			//	}
-
-			//});
-			//return result.ToList();
-			return GetMessageExchange<TMessage>(queueName, 20);
-		}
-
-		public List<TMessage> GetMessageExchange<TMessage>(string queueName, int count)
-		{
-			//int take = 20;
-
-			var result = new ConcurrentBag<TMessage>();
-			ConfigureExchange<TMessage>(queueName, null);
-
-			//_simpleConnection.
-			_simpleConnection.Execute(getChannel =>
-			{
-				for (int i = 0; i < count; i++)
-				{
-					TMessage data;
-					if (TryGetMessage(queueName, getChannel, out data))
-						result.Add(data);
-				}
-
-			});
-			return result.ToList();
-		}
 
 		private bool TryGetMessage<TMessage>(string queueName, Func<IModel> getChannel, out TMessage data)
 		{
@@ -323,7 +301,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		private void _consumer_Shutdown(object sender, ShutdownEventArgs e)
 		{
 			//_consumer.Received -= consumerOnReceived(_queueName, action, getChannel);
-			if (_consumer!=null)
+			if (_consumer != null)
 				_consumer.Shutdown -= _consumer_Shutdown;
 			_consumer = null;
 			_simpleConnection.Close();
@@ -450,7 +428,7 @@ namespace Bsa.Msa.RabbitMq.Core
 					//ProcessFromLocalBus(queueName, action, getChannel);
 					var tasks = _asyncWorkers.Where(x => x.IsActive).ToList();
 					//var iterCount = 0;
-					if (tasks.Count >= _messageHandlerSettings.DegreeOfParallelism || (_messageHandlerSettings.DegreeOfParallelism == 1 && _queue.Count==0))
+					if (tasks.Count >= _messageHandlerSettings.DegreeOfParallelism || (_messageHandlerSettings.DegreeOfParallelism == 1 && _queue.Count == 0))
 					{
 						_logger?.Debug($"To many threads Sleep {_queueName};{tasks.Count}>{_messageHandlerSettings.DegreeOfParallelism} ManagedThreadId:{Thread.CurrentThread.ManagedThreadId}");
 						ProcessSingleRmqMessage(_queueName, action, model, e);
@@ -728,7 +706,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			{
 				ActionOnModel(channel, model =>
 				{
-					var dictionary = GetArguments(_messageHandlerSettings);
+					var dictionary = GetArguments(_messageHandlerSettings.Ttl);
 					model.QueueDeclare(queue, true, false, false, dictionary);
 					var props = model.CreateBasicProperties();
 					props.DeliveryMode = 2;
@@ -755,9 +733,32 @@ namespace Bsa.Msa.RabbitMq.Core
 			Send(channel, errorQueue, em, new Dictionary<string, object>());
 		}
 
+
+		private void Send(IModel channel, string queue, string message, IDictionary<string, object> headers)
+		{
+			try
+			{
+
+				var dictionary = GetArguments(_messageHandlerSettings.Ttl);
+				channel.QueueDeclare(queue, true, false, false, dictionary);
+				var body = Encoding.UTF8.GetBytes(message);
+				var props = channel.CreateBasicProperties();
+				props.DeliveryMode = 2;
+				props.Headers = headers;
+				channel.BasicPublish("", queue, props, body);
+			}
+			catch (Exception ex)
+			{
+				_logger?.Error(ex.Message, ex);
+			}
+		}
+
 		private bool isTerminating;
 
+		/// <inheritdoc />
 		public bool IsModel => (_consumer?.Model?.IsOpen ?? false) && (_consumer.IsRunning);
+
+		/// <inheritdoc />
 		public void Dispose()
 		{
 			isTerminating = true;
@@ -774,43 +775,71 @@ namespace Bsa.Msa.RabbitMq.Core
 			}
 		}
 
-		private void Send(IModel channel, string queue, string message, IDictionary<string, object> headers)
+		/// <inheritdoc />
+		public void Delete<TMessage>() where TMessage : class
 		{
-			try
+			_logger?.Info($"Delete");
+			var exchangeName = _busNaming.GetExchangeName<TMessage>();
+			_simpleConnection.Configure(exchangeName, getChannel =>
 			{
+				getChannel().ExchangeDelete(exchangeName, true);
+			});
+		}
 
-				var dictionary = GetArguments(_messageHandlerSettings);
-				channel.QueueDeclare(queue, true, false, false, dictionary);
-				var body = Encoding.UTF8.GetBytes(message);
-				var props = channel.CreateBasicProperties();
-				props.DeliveryMode = 2;
-				props.Headers = headers;
-				channel.BasicPublish("", queue, props, body);
-			}
-			catch (Exception ex)
+		/// <inheritdoc />
+		public List<TMessage> GetMessageExchange<TMessage>(string queueName)
+		{
+			return GetMessageExchange<TMessage>(queueName, 20);
+		}
+
+		/// <inheritdoc />
+		public List<TMessage> GetMessageExchange<TMessage>(string queueName, int count)
+		{
+			//int take = 20;
+
+			var result = new ConcurrentBag<TMessage>();
+			ConfigureExchange<TMessage>(queueName, null);
+
+			//_simpleConnection.
+			_simpleConnection.Execute(getChannel =>
 			{
-				_logger?.Error(ex.Message, ex);
-			}
+				for (int i = 0; i < count; i++)
+				{
+					TMessage data;
+					if (TryGetMessage(queueName, getChannel, out data))
+						result.Add(data);
+				}
+
+			});
+			return result.ToList();
 		}
 
 
-
-
-
-
-		public void Send<TMessage>(TMessage message) where TMessage : class
+		/// <inheritdoc />
+		public void Send<TMessage>(TMessage message, int? ttl = null) where TMessage : class
 		{
 			var queueName = _busNaming.GetQueueName<TMessage>();
-			Send(queueName, message);
+			Send(queueName, message, ttl);
 
 		}
 
-		public void Send<TMessage>(string queue, TMessage message) where TMessage : class
+		/// <inheritdoc />
+		public void Send<TMessage>(string queue, TMessage message, int? ttl = null) where TMessage : class
 		{
+			IDictionary<string, object> dictionary = null;
+			if (ttl.HasValue)
+			{
+				dictionary = GetArguments(ttl);
+			}
 			_simpleConnection.Configure(queue, getChannel =>
 			{
-				getChannel().QueueDeclare(queue, true, false, false, null);
+				if (ttl.HasValue)
+					getChannel().QueueDelete(queue);
+				getChannel().QueueDeclare(queue, true, false, false, dictionary);
+
 			}, true);
+
+
 			_simpleConnection.Execute(getChannel =>
 			{
 				var m = _serializeService.Serialize(message);
@@ -822,6 +851,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		}
 
+		/// <inheritdoc />
 		public void Publish<TMessage>(TMessage message) where TMessage : class
 		{
 			Publish(message, String.Empty);
@@ -830,22 +860,22 @@ namespace Bsa.Msa.RabbitMq.Core
 		private static string fanout = "fanout";
 		private static string topic = "topic";
 
+		/// <inheritdoc />
 		public void Publish<TMessage>(TMessage message, string routingKey, string exchangeName = null) where TMessage : class
 		{
 			var type = fanout;
 			if (!string.IsNullOrEmpty(routingKey))
 				type = topic;
 
-			exchangeName = exchangeName ?? _busNaming.GetExchangeName<TMessage>(); 
+
+			exchangeName = exchangeName ?? _busNaming.GetExchangeName<TMessage>();
 			_simpleConnection.Configure(exchangeName, getChannel =>
 			{
-
-				getChannel().ExchangeDeclare(exchangeName, type, true);
+				getChannel().ExchangeDeclare(exchangeName, type, true, arguments: null);
 			});
 
 			_simpleConnection.Execute(getChannel =>
 			{
-
 				var m = _serializeService.Serialize(message);
 				var body = Encoding.UTF8.GetBytes(m);
 				var props = getChannel().CreateBasicProperties();
@@ -854,6 +884,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			});
 		}
 
+		/// <inheritdoc />
 		public void Delete<TMessage>(string queue) where TMessage : class
 		{
 			var exchangeName = _busNaming.GetExchangeName<TMessage>();
@@ -863,6 +894,8 @@ namespace Bsa.Msa.RabbitMq.Core
 				getChannel().QueueDelete(queue);
 			});
 		}
+
+		/// <inheritdoc />
 		public void Delete(string queue)
 		{
 			_simpleConnection.Execute(getChannel =>
@@ -886,12 +919,13 @@ namespace Bsa.Msa.RabbitMq.Core
 			});
 		}
 
+		/// <inheritdoc />
 		public bool IsConnected
 		{
 			get { return _simpleConnection.IsConnected; }
 		}
 
-
+		/// <inheritdoc />
 		public void Reconnect(string? name = null)
 		{
 			try
@@ -907,6 +941,7 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		}
 
+		/// <inheritdoc />
 		public IDisposable Respond<TRequest, TResponse>(Func<TRequest, TResponse> response, string queueName)
 			where TRequest : class
 			where TResponse : class
@@ -925,12 +960,15 @@ namespace Bsa.Msa.RabbitMq.Core
 
 			return null;
 		}
+
+		/// <inheritdoc />
 		public IDisposable Respond<TRequest, TResponse>(Func<TRequest, TResponse> response)
 			where TRequest : class
 			where TResponse : class
 		{
 			return Respond<TRequest, TResponse>(response, null);
 		}
+
 
 		private string GetQueue<TRequest>() where TRequest : class
 		{

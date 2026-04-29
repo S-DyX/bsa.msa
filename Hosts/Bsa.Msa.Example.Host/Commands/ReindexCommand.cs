@@ -30,7 +30,7 @@ namespace Bsa.Msa.Example.Host.Commands
 			{ 
 				Body = new string('c', 29698984)
 			}; 
-			_singleRmqBus.Publish(exampleMessage);
+			_singleRmqBus.Send("test.queue222", exampleMessage, 10000);
 			
 		}
 
