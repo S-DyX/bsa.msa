@@ -424,6 +424,12 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		IDisposable Respond<TRequest, TResponse>(Func<TRequest, TResponse> response, string queueName)
 			where TRequest : class
 			where TResponse : class;
+
+		/// <summary>
+		/// Purge
+		/// </summary>
+		/// <param name="queueName"></param>
+		void Purge(string queueName);
 	}
 
 

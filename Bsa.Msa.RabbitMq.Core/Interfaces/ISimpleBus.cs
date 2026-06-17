@@ -143,6 +143,12 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		/// </summary>
 		/// <param name="name"></param>
 		void Reconnect(string? name = null);
+
+		/// <summary>
+		/// Purge
+		/// </summary>
+		/// <param name="queueName"></param>
+		void Purge(string queueName);
 	}
 }
 

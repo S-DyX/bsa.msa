@@ -940,6 +940,14 @@ namespace Bsa.Msa.RabbitMq.Core
 			}
 
 		}
+		/// <inheritdoc />
+		public void Purge(string queueName)
+		{
+			_simpleConnection.Execute(getChannel =>
+			{
+				getChannel().QueuePurge(queueName);
+			});
+		}
 
 		/// <inheritdoc />
 		public IDisposable Respond<TRequest, TResponse>(Func<TRequest, TResponse> response, string queueName)

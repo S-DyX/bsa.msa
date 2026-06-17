@@ -136,6 +136,12 @@ namespace Bsa.Msa.RabbitMq.Core
 			return Bus.Respond<TRequest, TResponse>(response, queueName);
 		}
 
+		/// <inheritdoc />
+		public void Purge(string queueName)
+		{
+			Bus.Purge(queueName);
+		}
+
 
 		/// <inheritdoc />
 		public void Dispose()
