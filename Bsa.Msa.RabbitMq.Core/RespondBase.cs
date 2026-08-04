@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace Bsa.Msa.RabbitMq.Core
 {
+	/// <inheritdoc />
 	public class RespondBase<TMessage, TResponse> : ISubscriber
 		where TMessage : class, new()
 		where TResponse : class
@@ -16,7 +17,12 @@ namespace Bsa.Msa.RabbitMq.Core
 		private IMessageHandler<TMessage, TResponse> _messageHandler;
 		private Task _task;
 
-
+		/// <summary>
+		/// Ctor
+		/// </summary>
+		/// <param name="busManager"></param>
+		/// <param name="messageHandlerSettings"></param>
+		/// <param name="factory"></param>
 		public RespondBase(IBusManager busManager, IMessageHandlerSettings messageHandlerSettings, IMessageHandlerFactory factory)
 		{
 			_busManager = busManager;

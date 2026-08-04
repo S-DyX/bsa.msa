@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace Bsa.Msa.RabbitMq.Core.Settings
 {
-
+	/// <inheritdoc cref="IRabbitMqSettings" />
 	public sealed class RabbitMqSettings : SettingsBase, IRabbitMqSettings
 	{
 		protected override string SectionName
@@ -17,6 +17,11 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 				return "rabbitMQ";
 			}
 		}
+
+		/// <summary>
+		/// Ctor
+		/// </summary>
+		/// <exception cref="InvalidOperationException"></exception>
 		public RabbitMqSettings()
 		{
 			try
@@ -50,6 +55,7 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 
 		}
 
+		/// <inheritdoc cref="IRabbitMqSettings" />
 		public RabbitMqSettings(string connectionString)
 		{
 			Port = 5672;
@@ -80,27 +86,31 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 			}
 		}
 
-
+		/// <inheritdoc cref="IRabbitMqSettings" />
 		public IConfigurationSection Raw { get; protected set; }
 
+		/// <inheritdoc cref="IRabbitMqSettings" />
 		public string Name
 		{
 			get;
 			protected set;
 		}
 
+		/// <inheritdoc cref="IRabbitMqSettings" />
 		public string UserName
 		{
 			get;
 			protected set;
 		}
 
+		/// <inheritdoc cref="IRabbitMqSettings" />
 		public string Password
 		{
 			get;
 			protected set;
 		}
 
+		/// <inheritdoc cref="IRabbitMqSettings" />
 		public string Host
 		{
 			get
@@ -114,6 +124,7 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 
 		}
 
+		/// <inheritdoc cref="IRabbitMqSettings" />
 		public string VirtualHost { get; private set; }
 
 		private List<string> Hosts
@@ -121,18 +132,22 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 			get;
 			set;
 		}
+
+		/// <inheritdoc cref="IRabbitMqSettings" />
 		public int Port
 		{
 			get;
 			protected set;
 		}
 
+		/// <inheritdoc cref="IRabbitMqSettings" />
 		public int PrefetchCount
 		{
 			get;
 			protected set;
 		}
 
+		/// <inheritdoc cref="IRabbitMqSettings" />
 		public int Timeout
 		{
 			get;
@@ -140,7 +155,7 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 		}
 
 
-
+		/// <inheritdoc cref="IRabbitMqSettings" />
 		public string ConnectionString
 		{
 			get

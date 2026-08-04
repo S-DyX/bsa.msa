@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Bsa.Msa.RabbitMq.Core.Interfaces;
-using Bsa.Msa.RabbitMq.Core.Settings;
 
 namespace Bsa.Msa.RabbitMq.Core
 {

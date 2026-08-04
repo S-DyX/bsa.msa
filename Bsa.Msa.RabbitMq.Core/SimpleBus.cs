@@ -945,7 +945,14 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			_simpleConnection.Execute(getChannel =>
 			{
-				getChannel().QueuePurge(queueName);
+				try
+				{
+					getChannel().QueuePurge(queueName);
+				}
+				catch (OperationInterruptedException ex) when (ex.ShutdownReason?.ReplyCode == 404)
+				{
+					_logger.Warn($"Queue:{queueName} does not exists. Message:{ex.Message}");
+				}
 			});
 		}
 

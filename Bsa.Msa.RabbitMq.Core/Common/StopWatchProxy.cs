@@ -3,7 +3,7 @@ using System.Diagnostics;
 
 namespace Bsa.Msa.Common
 {
-	public class StopWatchProxy : IDisposable
+	public sealed class StopWatchProxy : IDisposable
 	{
 		private readonly Stopwatch _stopwatch;
 		public StopWatchProxy()

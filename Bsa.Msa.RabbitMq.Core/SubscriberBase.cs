@@ -25,6 +25,16 @@ namespace Bsa.Msa.RabbitMq.Core
 		private IDisposable _subscribers;
 		private Thread _task;
 		private bool _isInit = false;
+
+		/// <summary>
+		/// Ctor
+		/// </summary>
+		/// <param name="messageHandlerSettings"></param>
+		/// <param name="factory"></param>
+		/// <param name="logger"></param>
+		/// <param name="simpleBus"></param>
+		/// <param name="localBus"></param>
+		/// <param name="busNaming"></param>
 		public SubscriberBase(IMessageHandlerSettings messageHandlerSettings,
 			IMessageHandlerFactory factory,
 			ILocalLogger logger,

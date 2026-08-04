@@ -1,24 +1,23 @@
 ﻿using Bsa.Msa.RabbitMq.Core.Interfaces;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Bsa.Msa.RabbitMq.Core
 {
+	/// <inheritdoc />
 	internal sealed class DefaultSimpleBusNaming : ISimpleBusNaming
 	{
+		/// <inheritdoc />
 		public string GetQueueName(Type type)
 		{
 			return SimpleBusExtension.GetQueueName(type);
 		}
 
+		/// <inheritdoc />
 		public string GetQueueName<TMessage>()
 		{
 			return SimpleBusExtension.GetQueueName<TMessage>();
 		}
-
+		/// <inheritdoc />
 		public string GetExchangeName<TMessage>()
 		{
 			return SimpleBusExtension.GetExchangeName<TMessage>();

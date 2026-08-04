@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Configuration;
 using System.IO;
-using System.Xml.Linq;
-using Microsoft.Extensions.Configuration; 
-using Microsoft.Extensions.Configuration.Json;
+using Microsoft.Extensions.Configuration;
 
 namespace Bsa.Msa.Common.Settings
 {
