@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Platforms>AnyCPU;x64</Platforms>
     <Description>integrating Autofac with MSA Bsa.Msa.RabbitMq.Core
 http://bsasearch.org/msa.html</Description>
@@ -11,9 +11,10 @@ http://bsasearch.org/msa.html</Description>
     <RepositoryUrl>https://bitbucket.org/SBatyrgareev/bsa.msa/src</RepositoryUrl>
     <PackageProjectUrl>https://github.com/S-DyX/bsa.msa</PackageProjectUrl>
     <PackageTags>MSA Rabbit MQ RabbiMQ RMQ Bsa.Msa.RabbitMq.Core Bsa</PackageTags>
-    <PackageReleaseNotes>Restore connection after error: Already closed: The AMQP operation was interrupted: AMQP close-reason, initiated by Peer, code=406, text='PRECONDITION_FAILED - message size 17698984 is larger than configured max size 16777216'</PackageReleaseNotes>
+    <PackageReleaseNotes>_singleRmqBus.Send("test.queue", exampleMessage, 10000);
+now you can set ttl 10000 ms</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>6.0.66</Version>
+    <Version>9.0.71</Version>
     <AssemblyVersion></AssemblyVersion>
     <Authors>Stanislav Batyrgareev</Authors>
     <FileVersion></FileVersion>
@@ -21,12 +22,9 @@ http://bsasearch.org/msa.html</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Bsa.Msa.RabbitMq.Core\Bsa.Msa.RabbitMq.Core.csproj" />
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="9.0.69" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.18" />
   </ItemGroup>
 
 </Project>

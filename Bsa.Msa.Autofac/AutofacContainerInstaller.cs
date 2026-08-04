@@ -12,18 +12,19 @@ using Bsa.Msa.RabbitMq.Core.Settings;
 
 namespace Bsa.Msa.Autofac
 {
+	/// <summary>
+	/// Extension class for ioc registration
+	/// </summary>
 	public static class AutofacContainerInstaller
 	{
+		/// <summary>
+		/// We register all the services required for operation in the ioc
+		/// </summary>
+		/// <param name="builder"></param>
 		public static void InstallServices(this ContainerBuilder builder)
 		{
 			InstallRabbit(builder);
 			InstallHandlers(builder);
-			
-			builder.RegisterType<LocalContainer>()
-							.As<ILocalContainer>()
-							.SingleInstance();
-
-
 		}
 
 		

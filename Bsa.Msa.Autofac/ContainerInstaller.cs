@@ -14,13 +14,16 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bsa.Msa.Autofac
 {
+	/// <summary>
+	/// Extension class for ioc registration <see cref="IServiceCollection"/>
+	/// </summary>
 	public static class ContainerInstaller
 	{
 
 		public static void InstallHandlers(this IServiceCollection services)
-        {
-            services.AddSingleton<ILocalLogger, LocalLogger>();
-            services.AddSingleton<ILocalContainer, LocalContainer>();
+		{
+			services.AddSingleton<ILocalLogger, LocalLogger>();
+			services.AddSingleton<ILocalContainer, LocalContainer>();
 			services.AddSingleton<IHandlerRegistry, HandlerRegistry>();
 			services.AddSingleton<ICommandRegistry, CommandRegistry>();
 			services.AddSingleton<IServiceUnitManager, ServiceUnitManager>();
@@ -42,6 +45,11 @@ namespace Bsa.Msa.Autofac
 			services.AddTransient<ISimpleBus, SimpleBus>();
 			services.AddTransient<ISimpleConnection, SimpleConnection>();
 		}
+
+		/// <summary>
+		/// We register all the services required for operation in the ioc
+		/// </summary>
+		/// <param name="builder"></param>
 		public static void InstallHandlers(this ContainerBuilder builder)
 		{
 			builder.RegisterType<LocalContainer>()
