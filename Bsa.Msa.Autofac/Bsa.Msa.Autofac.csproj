@@ -14,7 +14,7 @@ http://bsasearch.org/msa.html</Description>
     <PackageReleaseNotes>_singleRmqBus.Send("test.queue", exampleMessage, 10000);
 now you can set ttl 10000 ms</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>9.0.71</Version>
+    <Version>9.0.73</Version>
     <AssemblyVersion></AssemblyVersion>
     <Authors>Stanislav Batyrgareev</Authors>
     <FileVersion></FileVersion>
@@ -23,7 +23,7 @@ now you can set ttl 10000 ms</PackageReleaseNotes>
 
   <ItemGroup>
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="9.0.0" />
-    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="9.0.69" />
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="9.0.73" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.18" />
   </ItemGroup>
 

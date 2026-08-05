@@ -45,18 +45,16 @@ namespace Bsa.Msa.Autofac
 		/// <inheritdoc />
 		public object Resolve(Type type)
 		{
-
-			var service = _serviceProvider.GetService(type);
-			if (service == null && _provider != null)
+			try
 			{
-				try
+				var service = _serviceProvider.GetService(type);
+				if (service == null && _provider != null)
 				{
+
 					foreach (var r in _provider.LifetimeScope.ComponentRegistry.Registrations)
 					{
 						foreach (var s in r.Services)
 						{
-
-
 							// Check if provider is still valid
 							if (_provider?.LifetimeScope == null)
 							{
@@ -71,19 +69,18 @@ namespace Bsa.Msa.Autofac
 									return result;
 							}
 						}
-
-
 					}
 				}
-				catch (ObjectDisposedException ex)
-				{
-					_localLogger?.Error($"Attempted to resolve {type.FullName} from disposed lifetime scope. " +
-										$"Check that the scope is properly managed and not disposed too early.", ex);
-					throw;
-				}
+
+				return service;
+			}
+			catch (ObjectDisposedException ex)
+			{
+				_localLogger?.Error($"Attempted to resolve {type.FullName} from disposed lifetime scope. " +
+									$"Check that the scope is properly managed and not disposed too early.", ex);
+				throw;
 			}
 
-			return service;
 		}
 
 		private object ResolveService(Service s)
@@ -100,7 +97,7 @@ namespace Bsa.Msa.Autofac
 			catch (Exception e)
 			{
 				_localLogger?.Error($"Attempted to resolve {s.Description} from disposed lifetime scope. " +
-				                    $"Check that the scope is properly managed and not disposed too early.", e);
+									$"Check that the scope is properly managed and not disposed too early.", e);
 			}
 			try
 			{
@@ -114,9 +111,9 @@ namespace Bsa.Msa.Autofac
 			catch (Exception e)
 			{
 				_localLogger?.Error($"Attempted to resolve {s.Description} from disposed lifetime scope. " +
-				                    $"Check that the scope is properly managed and not disposed too early.", e);
+									$"Check that the scope is properly managed and not disposed too early.", e);
 			}
-		
+
 
 			return null;
 		}

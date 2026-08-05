@@ -150,14 +150,17 @@ namespace Bsa.Msa.Common.Services.Impl
 			{
 				_subscriberFactory.Delete(x);
 			});
+
+			Parallel.ForEach(_subscribers, new ParallelOptions() { MaxDegreeOfParallelism = 1 }, x =>
+			{
+				x.Start();
+			});
+
 			Parallel.ForEach(_serviceUnits, new ParallelOptions(){MaxDegreeOfParallelism = 2}, x =>
 			{
 				x.Start();
 			});
-			Parallel.ForEach(_subscribers, new ParallelOptions() { MaxDegreeOfParallelism = 2 }, x =>
-			{
-				x.Start();
-			});
+			
 		}
 
 		private void CreateNew(MessageHandlerSettings handler)

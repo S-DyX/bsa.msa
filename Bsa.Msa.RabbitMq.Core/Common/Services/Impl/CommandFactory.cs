@@ -75,9 +75,6 @@ namespace Bsa.Msa.Common.Services.Impl
 				_localLogger.Error($"Can not create instance of command type:{commandType}; TypeOf:{handlerType}; Message:{e.Message}", e);
 				throw;
 			}
-
-
-
 		}
 	}
 }
