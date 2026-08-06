@@ -1,7 +1,7 @@
-﻿using System.Xml.Linq;
+﻿using Bsa.Msa.Common.Services.Settings;
 using Bsa.Msa.Common.Settings;
-using Bsa.Msa.Common.Services.Settings;
 using Microsoft.Extensions.Configuration;
+using System;
 
 namespace Bsa.Msa.Common.Services.MessageHandling
 {
@@ -46,9 +46,10 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 			Type = GetAttValue(raw, "type");
 			RoutingKey = GetAttValue(raw, "routingKey");
 			Retry = GetAttBoolValue(raw, "retry", false);
-			ClearAfterStart=GetAttBoolValue(raw, "clearAfterStart", false);
+			ClearAfterStart = GetAttBoolValue(raw, "clearAfterStart", false);
 			AutoDelete = GetAttBoolValue(raw, "autoDelete", false);
 			AppendGuid = GetAttBoolValue(raw, "appendGuid", false);
+			Uid = Guid.NewGuid().ToString();
 			RetryCount = GetAttIntValue(raw, "retryCount");
 			SubscriptionEndpoint = GetAttValue(raw, "subscriptionEndpoint");
 			UseExchange = GetAttBoolValue(raw, "useExchange", false);
@@ -58,16 +59,16 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 			var attValue = GetAttValue(raw, "postfix");
 			if (!string.IsNullOrEmpty(attValue))
 				Postfix = attValue;
-			Ttl = GetAttIntValue(raw, "ttl")?? GetAttIntValue(raw, "Ttl");
-            TurnOffInternalQueue = GetAttBoolValue(raw, "turnOffInternalQueue", false);
+			Ttl = GetAttIntValue(raw, "ttl") ?? GetAttIntValue(raw, "Ttl");
+			TurnOffInternalQueue = GetAttBoolValue(raw, "turnOffInternalQueue", false);
 
-            if (!string.IsNullOrWhiteSpace(SubscriptionEndpoint) && !string.IsNullOrEmpty(Postfix))
+			if (!string.IsNullOrWhiteSpace(SubscriptionEndpoint) && !string.IsNullOrEmpty(Postfix))
 			{
 				SetSubscriptionEndpoint($"{SubscriptionEndpoint}.{Postfix}");
 			}
 
 		}
-
+		/// <inheritdoc/>
 		public string SubscriptionEndpoint
 		{
 			get; protected set;
@@ -80,16 +81,17 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 			protected set;
 		}
 
-
+		/// <inheritdoc/>
 		public bool Retry
 		{
 			get;
 			protected set;
 		}
 
+		/// <inheritdoc/>
 		public int? RetryCount { get; protected set; }
 
-
+		/// <inheritdoc/>
 		public ushort PrefetchCount
 		{
 			get;
@@ -112,35 +114,44 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 			}
 		}
 
+		/// <inheritdoc/>
 		public int? Ttl
 		{
 			get;
 			protected set;
 		}
 
+		/// <inheritdoc/>
 		public bool ClearAfterStart
 		{
 			get;
 			protected set;
 		}
+		/// <inheritdoc/>
 		public bool AutoDelete
 		{
 			get;
 			protected set;
 		}
+		/// <inheritdoc/>
 		public bool AppendGuid
 		{
 			get;
 			protected set;
 		}
 
-        public bool TurnOffInternalQueue
-        {
-            get;
-            protected set;
-        }
+		/// <inheritdoc/>
+		public bool TurnOffInternalQueue
+		{
+			get;
+			protected set;
+		}
 
-        public string Postfix
+		/// <inheritdoc/>
+		public string Uid { get; set; }
+
+		/// <inheritdoc/>
+		public string Postfix
 		{
 			get;
 			set;

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
@@ -22,11 +22,11 @@
 
   <ItemGroup>
     <PackageReference Include="FileStorage.Contracts.Rest.Impl" Version="7.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Bsa.Msa.Autofac\Bsa.Msa.Autofac.csproj" />
+    <ProjectReference Include="..\..\Bsa.Msa.RabbitMq.Core\Bsa.Msa.RabbitMq.Core.csproj" />
   </ItemGroup>
 
 </Project>

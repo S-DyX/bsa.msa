@@ -19,10 +19,12 @@ namespace Bsa.Msa.Example.Host.Handlers
 	public sealed class ReindexMessageHandler : IMessageHandler<ReindexMessage>
 	{
 		private readonly IBusManager _busManager;
+		private readonly IMessageHandlerSettings _handlerSettings;
 
-		public ReindexMessageHandler(IBusManager busManager)
+		public ReindexMessageHandler(IBusManager busManager, IMessageHandlerSettings handlerSettings)
 		{
 			this._busManager = busManager;
+			_handlerSettings = handlerSettings;
 		}
 		public void Handle(ReindexMessage message)
 		{

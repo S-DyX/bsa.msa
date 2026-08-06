@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Platforms>AnyCPU;x64</Platforms>
     <Description>integrating Autofac with MSA Bsa.Msa.RabbitMq.Core
 http://bsasearch.org/msa.html</Description>
@@ -14,7 +14,7 @@ http://bsasearch.org/msa.html</Description>
     <PackageReleaseNotes>_singleRmqBus.Send("test.queue", exampleMessage, 10000);
 now you can set ttl 10000 ms</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>9.0.73</Version>
+    <Version>10.0.76</Version>
     <AssemblyVersion></AssemblyVersion>
     <Authors>Stanislav Batyrgareev</Authors>
     <FileVersion></FileVersion>
@@ -22,9 +22,9 @@ now you can set ttl 10000 ms</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="9.0.0" />
-    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="9.0.73" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.18" />
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="10.0.76" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
   </ItemGroup>
 
 </Project>

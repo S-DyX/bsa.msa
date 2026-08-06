@@ -287,6 +287,11 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 		/// </para>
 		/// </remarks>
 		bool TurnOffInternalQueue { get; }
+
+		/// <summary>
+		/// Unique uid
+		/// </summary>
+		string Uid { get; internal set; }
 	}
 
 }

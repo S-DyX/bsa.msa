@@ -26,7 +26,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		private readonly ISerializeService _serializeService;
 		private readonly InternalBus _internalBus;
 
-		private int _treadCount = 0;
+		private int _treadCount;
 		private readonly object _lock = new object();
 
 		/// <summary>
@@ -96,7 +96,10 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			_messageHandlerSettings = messageHandlerSettings;
 			if (messageHandlerSettings.AppendGuid)
-				queueName = $"{queueName}_{Guid.NewGuid()}";
+			{
+				queueName = $"{queueName}_{messageHandlerSettings.Uid}";
+			}
+
 			Action<Func<IModel>> configureAction = getChannel =>
 			{
 				var dictionary = GetArguments(messageHandlerSettings.Ttl);
@@ -132,7 +135,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				queueName = $"{queueName}_{Guid.NewGuid()}";
 
 
-			Consume<TMessage>(queueName, action, GetExchangeConfigure<TMessage>(queueName, messageHandlerSettings));
+			Consume(queueName, action, GetExchangeConfigure<TMessage>(queueName, messageHandlerSettings));
 
 
 		}
@@ -220,7 +223,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				getModel().ExchangeDeclare(exchangeName, type, true);
 				getModel().QueueDeclare(queueName, true, false, _messageHandlerSettings.AutoDelete, dictionary);
 				getModel().QueueBind(queueName, exchangeName, routingKey ?? String.Empty);
-				getModel().BasicQos(0, _messageHandlerSettings?.PrefetchCount ?? (ushort)5, false);
+				getModel().BasicQos(0, _messageHandlerSettings?.PrefetchCount ?? 5, false);
 
 			};
 			return action;
@@ -261,7 +264,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			return !isEmpty;
 		}
 
-		private const int _sleepTime = 500;
+		private const int SleepTime = 500;
 		private int _iteration = 1;
 
 		private void QueueingBasicConsumer<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel,
@@ -404,7 +407,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		}
 		private readonly object _syncTask = new object();
 		private readonly List<AsyncWorker> _asyncWorkers = new List<AsyncWorker>(5);
-		private ConcurrentQueue<Action> _queue = new ConcurrentQueue<Action>();
+		private readonly ConcurrentQueue<Action> _queue = new ConcurrentQueue<Action>();
 
 		private void ActionOnModel(Func<IModel> channel, Action<IModel> action)
 		{
@@ -935,7 +938,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			}
 			catch
 			{
-				Task.Delay(_sleepTime);
+				Task.Delay(SleepTime);
 				//на прthrow;
 			}
 

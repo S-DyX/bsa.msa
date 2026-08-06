@@ -48,6 +48,10 @@ namespace Bsa.Msa.Common.Services.Impl
 					{
 						result.Add(settings);
 					}
+					else if (p.ParameterType == typeof(IMessageHandlerSettings))
+					{
+						result.Add(settings as IMessageHandlerSettings);
+					}
 					else
 					{
 						try
