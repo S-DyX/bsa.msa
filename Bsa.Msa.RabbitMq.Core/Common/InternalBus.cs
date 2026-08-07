@@ -58,6 +58,8 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 
 		public void Load()
 		{
+			if (_isReady)
+				return;
 			lock (_lock)
 			{
 				if (_isReady)

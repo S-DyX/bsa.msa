@@ -114,7 +114,7 @@ namespace Bsa.Msa.Common.Services.Impl
 				}
 				catch (Exception e)
 				{
-					_logger.Error(e.Message,e);
+					_logger.Error(e.Message, e);
 				}
 			}
 		}
@@ -122,9 +122,40 @@ namespace Bsa.Msa.Common.Services.Impl
 		/// <inheritdoc />
 		public void Start()
 		{
+			InitServices();
+			Parallel.ForEach(_deleteQueue, new ParallelOptions() { MaxDegreeOfParallelism = 1 }, x =>
+			{
+				_subscriberFactory.Delete(x);
+			});
+
+			Parallel.ForEach(_subscribers, new ParallelOptions() { MaxDegreeOfParallelism = 1 }, x =>
+			{
+				x.Start();
+			});
+
+			Parallel.ForEach(_serviceUnits, new ParallelOptions() { MaxDegreeOfParallelism = 2 }, x =>
+			{
+				x.Start();
+			});
+
+		}
+
+		private bool _isInit;
+		private void InitServices()
+		{
+			if (_isInit)
+			{
+				_logger?.Info($"Already init");
+				return;
+			}
+
 			_logger?.Info($"Start load local bus");
 			_internalBus.Load();
 			_logger?.Info($"End load local bus");
+
+			_serviceUnits.Clear();
+			_subscribers.Clear();
+			_deleteQueue.Clear();
 			var services = _servicesSection.GetServices().ToArray();
 			_logger?.Info($"Start load services ");
 			foreach (var service in services)
@@ -138,29 +169,21 @@ namespace Bsa.Msa.Common.Services.Impl
 				var commands = service.GetCommands();
 				foreach (var commandSetting in commands)
 				{
-					var rep = new RepeatingCommandContainer(commandSetting, _repeaterFactory, _commandFactory);
-					rep.OnError += HandleServiceUnitError;
-					_serviceUnits.Add(rep);
+					try
+					{
+						var rep = new RepeatingCommandContainer(commandSetting, _repeaterFactory, _commandFactory);
+						rep.OnError += HandleServiceUnitError;
+						_serviceUnits.Add(rep);
+					}
+					catch (Exception e)
+					{
+						_logger?.Error($"Can not create handler: {commandSetting.Name} Message:{e.Message}", e);
+					}
 					//list.Add(_repeaterFactory.Create(commandSetting.Type, commandSetting));
 				}
 			}
-
+			_isInit = true;
 			_logger?.Info($"End load services {services.Length}");
-			Parallel.ForEach(_deleteQueue, new ParallelOptions() { MaxDegreeOfParallelism = 1 }, x =>
-			{
-				_subscriberFactory.Delete(x);
-			});
-
-			Parallel.ForEach(_subscribers, new ParallelOptions() { MaxDegreeOfParallelism = 1 }, x =>
-			{
-				x.Start();
-			});
-
-			Parallel.ForEach(_serviceUnits, new ParallelOptions(){MaxDegreeOfParallelism = 2}, x =>
-			{
-				x.Start();
-			});
-			
 		}
 
 		private void CreateNew(MessageHandlerSettings handler)
@@ -186,7 +209,7 @@ namespace Bsa.Msa.Common.Services.Impl
 			{
 				_logger.Error($"Can not create handler: {handler.Name} Message:{e.Message}", e);
 			}
-			
+
 
 			_logger?.Info($"Created: Subscriber:{handler.Type}, Count:{handler.DegreeOfParallelism}");
 		}
