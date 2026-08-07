@@ -7,6 +7,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using RabbitMQ.Client.Exceptions;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -903,6 +904,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			_simpleConnection.Execute(getChannel =>
 			{
+				//getChannel().QueueDeclare(queue, true, false, false, null);
 				getChannel().QueueDelete(queue);
 			});
 		}

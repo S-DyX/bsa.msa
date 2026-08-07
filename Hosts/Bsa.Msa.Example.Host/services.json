@@ -81,8 +81,8 @@
         {
           "name": "ReindexMessageHandler",
           "type": "ReindexMessageHandler",
-          "subscriptionEndpoint": "test.queue11",
-          "degreeOfParallelism": 1,
+          "subscriptionEndpoint": "test.queue113",
+          "degreeOfParallelism": 0,
           "retryCount": 2,
           "clearAfterStart": "true",
           "useExchange": true,

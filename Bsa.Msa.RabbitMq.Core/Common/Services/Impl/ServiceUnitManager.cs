@@ -146,7 +146,7 @@ namespace Bsa.Msa.Common.Services.Impl
 			}
 
 			_logger?.Info($"End load services {services.Length}");
-			Parallel.ForEach(_deleteQueue, new ParallelOptions() { MaxDegreeOfParallelism = 2 }, x =>
+			Parallel.ForEach(_deleteQueue, new ParallelOptions() { MaxDegreeOfParallelism = 1 }, x =>
 			{
 				_subscriberFactory.Delete(x);
 			});

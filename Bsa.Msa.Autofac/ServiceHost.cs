@@ -23,8 +23,31 @@ namespace Bsa.Msa.Autofac
 		public Task StartAsync(CancellationToken cancellationToken)
 		{
 			//serviceProvider.InstallHandlers();
-			_serviceUnitManager.Start();
-			
+			var t = Task.Factory.StartNew(() =>
+				{
+
+					var isInit = false;
+					while (!isInit)
+					{
+						try
+						{
+							_serviceUnitManager.Start();
+							isInit = true;
+						}
+						catch (Exception e)
+						{
+							Task.Delay(2000, cancellationToken);
+							//_logger.LogError(e, "{EMessage}", e.Message);
+						}
+					}
+
+
+				}, cancellationToken,
+				TaskCreationOptions.None,
+				TaskScheduler.Default);
+
+			t.Wait(1000);
+
 			return Task.CompletedTask;
 		}
 

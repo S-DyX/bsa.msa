@@ -70,10 +70,6 @@ namespace Bsa.Msa.RabbitMq.Core
 				: messageHandlerSettings.SubscriptionEndpoint;
 			_simpleBus.Delete(subscriptionEndpoint);
 			_simpleBus.Delete($"{subscriptionEndpoint}.Error");
-			//if (messageHandlerSettings.UseExchange)
-			//{
-			//	_simpleBus.Delete<>();
-			//}
 		}
 	}
 }
