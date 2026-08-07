@@ -31,12 +31,13 @@ namespace Bsa.Msa.Autofac
 					{
 						try
 						{
+
+							Task.Delay(5000, cancellationToken);
 							_serviceUnitManager.Start();
 							isInit = true;
 						}
 						catch (Exception e)
 						{
-							Task.Delay(2000, cancellationToken);
 							//_logger.LogError(e, "{EMessage}", e.Message);
 						}
 					}

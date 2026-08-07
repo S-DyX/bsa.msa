@@ -26,7 +26,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Bsa.Msa.Autofac\Bsa.Msa.Autofac.csproj" />
-    <ProjectReference Include="..\..\Bsa.Msa.RabbitMq.Core\Bsa.Msa.RabbitMq.Core.csproj" />
   </ItemGroup>
 
 </Project>
