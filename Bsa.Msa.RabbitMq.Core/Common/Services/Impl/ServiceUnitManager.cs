@@ -122,6 +122,7 @@ namespace Bsa.Msa.Common.Services.Impl
 		/// <inheritdoc />
 		public void Start()
 		{
+			_logger?.Info($"Try start service unit");
 			InitServices();
 			Parallel.ForEach(_deleteQueue, new ParallelOptions() { MaxDegreeOfParallelism = 1 }, x =>
 			{
@@ -137,6 +138,8 @@ namespace Bsa.Msa.Common.Services.Impl
 			{
 				x.Start();
 			});
+
+			_logger?.Info($"Service unit started");
 
 		}
 
