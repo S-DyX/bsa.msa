@@ -106,7 +106,7 @@ namespace Bsa.Msa.Common.Services.Impl
 				{
 					foreach (var subscriber in _subscribers)
 					{
-						_logger.Info($"IsStarted:{subscriber.IsStarted}; {subscriber.Name}");
+						_logger?.Info($"IsStarted:{subscriber.IsStarted}; {subscriber.Name}");
 						if (!subscriber.IsStarted)
 							;
 					}
@@ -114,7 +114,7 @@ namespace Bsa.Msa.Common.Services.Impl
 				}
 				catch (Exception e)
 				{
-					_logger.Error(e.Message, e);
+					_logger?.Error(e.Message, e);
 				}
 			}
 		}
@@ -210,7 +210,7 @@ namespace Bsa.Msa.Common.Services.Impl
 			}
 			catch (Exception e)
 			{
-				_logger.Error($"Can not create handler: {handler.Name} Message:{e.Message}", e);
+				_logger?.Error($"Can not create handler: {handler.Name} Message:{e.Message}", e);
 			}
 
 

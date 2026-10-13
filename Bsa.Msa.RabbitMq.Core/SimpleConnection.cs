@@ -5,8 +5,8 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Bsa.Msa.RabbitMq.Core
 {
@@ -17,29 +17,35 @@ namespace Bsa.Msa.RabbitMq.Core
 		private readonly ILocalLogger _logger;
 		private ConnectionFactory _connectionFactory;
 
-		private static object _sync = new object();
+		// Guards the connection, the channel and every operation on the channel:
+		// IModel is not thread-safe, so all channel calls go through this lock.
+		private readonly object _sync = new object();
 
 		private IConnection _connection;
+
+		private static readonly TimeSpan CloseTimeout = TimeSpan.FromSeconds(5);
 
 		private IConnection Connection
 		{
 			get
 			{
-				if (_connection == null)
+				lock (_sync)
 				{
-					try
-					{ 
-						_connection = ConnectionFactory.CreateConnection();
-					}
-					catch (Exception ex)
+					if (_connection == null)
 					{
-						_logger?.Error($"Host:{ConnectionFactory.HostName},User:{_settings.UserName}", ex);
-						throw new ConnectFailureException($"Host:{ConnectionFactory.HostName},User:{_settings.UserName}", ex);
+						try
+						{
+							_connection = ConnectionFactory.CreateConnection();
+						}
+						catch (Exception ex)
+						{
+							_logger?.Error($"Host:{ConnectionFactory.HostName},User:{_settings.UserName}", ex);
+							throw new ConnectFailureException($"Host:{ConnectionFactory.HostName},User:{_settings.UserName}", ex);
+						}
 					}
 
-					//_connection.ConnectionShutdown += _connection_ConnectionShutdown;
+					return _connection;
 				}
-				return _connection;
 			}
 		}
 
@@ -107,9 +113,12 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			if (ConnectionFactory.AutomaticRecoveryEnabled)
 			{
-				if (!IsConnected)
-					Connect();
-				return _model;
+				lock (_sync)
+				{
+					if (!IsConnected)
+						Connect();
+					return _model;
+				}
 			}
 			var retryCount = 0;
 			int i = 1;
@@ -165,7 +174,6 @@ namespace Bsa.Msa.RabbitMq.Core
 				catch (Exception ex)
 				{
 					_logger?.Error(ex.ToString(), ex);
-					Task.Delay(_sleepTime);
 				}
 			}
 			if (_model != null)
@@ -182,10 +190,6 @@ namespace Bsa.Msa.RabbitMq.Core
 				catch (Exception ex)
 				{
 					_logger?.Error(ex.ToString(), ex);
-					Task.Delay(_sleepTime);
-				}
-				finally
-				{
 				}
 			}
 		}
@@ -193,51 +197,66 @@ namespace Bsa.Msa.RabbitMq.Core
 		/// <inheritdoc />
 		public void Close()
 		{
-			if (_connection != null)
+			lock (_sync)
 			{
-				try
-				{
-					if (!_connection.IsOpen)
-					{
-						var temp = _connection;
-						_connection = null;
-						temp.ConnectionShutdown -= _connection_ConnectionShutdown;
-						using (temp)
-						{
-						}
-					}
-				}
-				catch (ObjectDisposedException ode)
-				{
-					_logger?.Error(ode.ToString(), ode);
-				}
-				catch (Exception ex)
-				{
-					_logger?.Error(ex.ToString(), ex);
-					Task.Delay(_sleepTime);
-				}
-				finally
-				{
-					_connection = null;
-
-				}
+				CloseModel();
+				CloseConnection();
 			}
-			if (_model != null)
+		}
+
+		private void CloseModel()
+		{
+			var model = _model;
+			_model = null;
+			if (model == null) return;
+
+			try
 			{
-				try
-				{
-					if (!_model.IsClosed)
-						_model.Close();
-				}
-				catch (Exception ex)
-				{
-					_logger?.Error(ex.ToString(), ex);
-					Task.Delay(_sleepTime);
-				}
-				finally
-				{
-					_model = null;
-				}
+				if (model.IsOpen)
+					model.Close();
+			}
+			catch (Exception ex)
+			{
+				_logger?.Error(ex.ToString(), ex);
+			}
+
+			try
+			{
+				model.Dispose();
+			}
+			catch (Exception ex)
+			{
+				_logger?.Error(ex.ToString(), ex);
+			}
+		}
+
+		private void CloseConnection()
+		{
+			var connection = _connection;
+			_connection = null;
+			if (connection == null) return;
+
+			_logger?.Info("Close connection");
+			connection.ConnectionShutdown -= _connection_ConnectionShutdown;
+			try
+			{
+				// An open connection must be closed explicitly,
+				// otherwise the socket and the recovery loop stay alive.
+				if (connection.IsOpen)
+					connection.Close(CloseTimeout);
+			}
+			catch (Exception ex)
+			{
+				_logger?.Error(ex.ToString(), ex);
+			}
+
+			try
+			{
+				connection.Dispose();
+			}
+			catch (Exception ex)
+			{
+				_logger?.Error(ex.ToString(), ex);
 			}
 		}
 
@@ -254,38 +273,57 @@ namespace Bsa.Msa.RabbitMq.Core
 		/// <inheritdoc />
 		public void Configure(string name, Action<Func<IModel>> action, bool ignoreException = false)
 		{
-
 			lock (_actionsConfigure)
 			{
 				if (_actionsConfigure.ContainsKey(name))
 					return;
-				if (!_actionsConfigure.ContainsKey(name))
-					_actionsConfigure.Add(name, action);
 			}
 
-			var isSuscribed = false;
-			while (!isSuscribed)
+			while (true)
 			{
 				try
 				{
-					action.Invoke(() => CreateModel(name));
-					isSuscribed = true;
+					lock (_sync)
+					{
+						action.Invoke(() => CreateModel(name));
+					}
+
+					// Cache only a successful configuration, a failed one is retried next time.
+					lock (_actionsConfigure)
+					{
+						_actionsConfigure[name] = action;
+					}
+					return;
 				}
 				catch (Exception ex)
 				{
 					_logger?.Error(ex.ToString(), ex);
 					if (ignoreException)
-						break;
+						return;
 					Thread.Sleep(1000);
 				}
 			}
+		}
 
+		/// <inheritdoc />
+		public void RemoveConfiguration(string name)
+		{
+			lock (_actionsConfigure)
+			{
+				_actionsConfigure.Remove(name);
+			}
 		}
 
 		/// <inheritdoc />
 		public void ReConfigure()
 		{
-			foreach (var config in _actionsConfigure)
+			KeyValuePair<string, Action<Func<IModel>>>[] configs;
+			lock (_actionsConfigure)
+			{
+				configs = _actionsConfigure.ToArray();
+			}
+
+			foreach (var config in configs)
 			{
 				var action = config.Value;
 
@@ -294,30 +332,28 @@ namespace Bsa.Msa.RabbitMq.Core
 				{
 					try
 					{
-						action.Invoke(() => CreateModel(config.Key));
+						lock (_sync)
+						{
+							action.Invoke(() => CreateModel(config.Key));
+						}
 						isSuscribed = true;
 					}
 					catch (Exception ex)
 					{
 						_logger?.Error(ex.ToString(), ex);
-						Task.Delay(_sleepTime * 2);
-						// добавить event
+						Thread.Sleep(_sleepTime * 2);
 					}
 				}
 			}
-
 		}
-
-		private readonly object _syncSend = new object();
 
 		/// <inheritdoc />
 		public void Execute(Action<Func<IModel>> action, string name = null)
 		{
-			lock (_syncSend)
+			lock (_sync)
 			{
 				action.Invoke(() => CreateModel(name));
 			}
-
 		}
 
 		/// <inheritdoc />
@@ -336,14 +372,16 @@ namespace Bsa.Msa.RabbitMq.Core
 				{
 					try
 					{
-						item.Invoke(() => CreateModel("unknown"));
+						lock (_sync)
+						{
+							item.Invoke(() => CreateModel("unknown"));
+						}
 						isSubscribed = true;
 					}
 					catch (Exception ex)
 					{
 						_logger?.Error(ex.ToString(), ex);
-						Task.Delay(_sleepTime);
-						// добавить event
+						Thread.Sleep(_sleepTime);
 					}
 				}
 			}
@@ -375,9 +413,19 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		private void Connect()
 		{
-			BeforeConnect?.Invoke();
-			if (_model == null)
+			lock (_sync)
 			{
+				if (_model != null && !_model.IsOpen && _connection != null && _connection.IsOpen)
+				{
+					// The broker closed only the channel (404, 406, ...). Automatic recovery
+					// restores connection-level failures only, so the channel is recreated here.
+					_logger?.Warn("Channel was closed by the broker, creating a new one");
+					CloseModel();
+				}
+
+				if (_model != null) return;
+
+				BeforeConnect?.Invoke();
 				_model = Connection.CreateModel();
 				AfterConnect?.Invoke();
 			}

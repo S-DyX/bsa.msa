@@ -18,7 +18,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		private readonly ILocalBus _localBus;
 		private readonly ISimpleBusNaming _busNaming;
 		private readonly ILocalLogger _logger;
-		private bool _isRun;
+		private volatile bool _isRun;
 		private IMessageHandler<TMessage> _messageHandler;
 		private IMessageHandlerAsync<TMessage> _messageHandlerAsync;
 
@@ -71,7 +71,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		public void Start()
 		{
 			_isInit = false;
-			while (!_isInit)
+			while (!_isInit && _isRun)
 			{
 				try
 				{
@@ -155,6 +155,10 @@ namespace Bsa.Msa.RabbitMq.Core
 			_logger?.Info($"Stop subscriber {_messageHandlerSettings.SubscriptionEndpoint}");
 			_isRun = false;
 			DisposeInternal();
+
+			// The bus owns the consumer, the workers and the connection of this subscriber.
+			_simpleBus.Shutdown = null;
+			_simpleBus.Dispose();
 		}
 
 		public event UnhandledExceptionEventHandler OnError;

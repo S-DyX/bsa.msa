@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Bsa.Msa.Common
 {
@@ -41,7 +40,7 @@ namespace Bsa.Msa.Common
 			while (_process.ContainsKey(key))
 			{
 				Console.WriteLine($"Sleep:{key}");
-				Task.Delay(waitInterval);
+				Thread.Sleep(waitInterval);
 			}
 		}
 		public void WaitWhileIsLockTimes(string key, int times, int waitInterval = 500)
@@ -50,7 +49,7 @@ namespace Bsa.Msa.Common
 			while (_process.ContainsKey(key) && times > i)
 			{
 				Console.WriteLine($"Sleep:{key}");
-				Task.Delay(waitInterval);
+				Thread.Sleep(waitInterval);
 				i++;
 			}
 		}
@@ -104,7 +103,7 @@ namespace Bsa.Msa.Common
 			lock (_syncInstance)
 			{
 				Check(key);
-				_process.Add(key, new object());
+				_process[key] = new object();
 			}
 		}
 		public void Release(string key)
@@ -116,7 +115,7 @@ namespace Bsa.Msa.Common
 					if (_process.ContainsKey(key))
 					{
 						Console.WriteLine($"Release:{key}");
-						_process.Remove(key);
+						_process.TryRemove(key, out _);
 					}
 				}
 			}
@@ -133,6 +132,7 @@ namespace Bsa.Msa.Common
 
 		private readonly object _syncInstance = new object();
 
-		private readonly Dictionary<string, object> _process = new Dictionary<string, object>();
+		// Read outside the lock by the wait loops, so the dictionary must be thread-safe.
+		private readonly ConcurrentDictionary<string, object> _process = new ConcurrentDictionary<string, object>();
 	}
 }

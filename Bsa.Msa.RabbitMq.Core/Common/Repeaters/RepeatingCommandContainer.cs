@@ -50,11 +50,27 @@ namespace Bsa.Msa.Common.Repeaters
 
 				cancellationToken =>
 				{
+					if (!RepeaterSchedule.IsAllowedToday(_settings.DaysOfWeek))
+					{
+						_logger?.Debug($"Skip command: {_settings.Name}, not allowed today");
+						return;
+					}
+
 					var settings = (ISettings)_settings;
-					_command = _commandFactory.Create(_settings.Type, settings, cancellationToken);
-					_logger?.Info($"Executing command: {_settings.Name}");
-					_command.Execute();
-					_logger?.Info($"Was executed command: {_settings.Name}");
+					var command = _commandFactory.Create(_settings.Type, settings, cancellationToken);
+					_command = command;
+					try
+					{
+						_logger?.Info($"Executing command: {_settings.Name}");
+						command.Execute();
+						_logger?.Info($"Was executed command: {_settings.Name}");
+					}
+					finally
+					{
+						// A new command is created on every tick, so each one is disposed.
+						command.Dispose();
+						Interlocked.CompareExchange(ref _command, null, command);
+					}
 				}
 			);
 			_logger?.Info($"Start command end: {_settings.Name}");

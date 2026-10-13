@@ -104,10 +104,18 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 		{
 			lock (_lock)
 			{
-				var forClear = _concurrent.Where(x => x.Value.Queue == queue);
+				var forClear = _concurrent.Where(x => x.Value.Queue == queue).ToList();
 				foreach (var keyValuePair in forClear)
 				{
-					_concurrent.Remove(keyValuePair.Key, out var val);
+					// Ack removes the item and its file, otherwise it is loaded again after a restart.
+					try
+					{
+						Ack(keyValuePair.Key);
+					}
+					catch (Exception e)
+					{
+						_localLogger?.Error($"Can not clear message {keyValuePair.Key}: {e.Message}", e);
+					}
 				}
 			}
 		}

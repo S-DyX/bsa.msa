@@ -43,9 +43,9 @@ namespace Bsa.Msa.DependencyInjection
 			services.AddSingleton<ISingleRmqBus, SingleRmqBus>();
 			services.AddSingleton<IRabbitMqSettings, RabbitMqSettings>();
 			services.AddSingleton<ILocalBus, LocalBus>();
-			services.AddTransient<IBusManager, BusManager>();
-			services.AddTransient<ISimpleBus, SimpleBus>();
-			services.AddTransient<ISimpleConnection, SimpleConnection>();
+			services.AddSingleton<IBusManager, BusManager>();
+			services.AddSingleton<ISimpleBus, SimpleBus>();
+			services.AddSingleton<ISimpleConnection, SimpleConnection>();
 		} 
 
 	}

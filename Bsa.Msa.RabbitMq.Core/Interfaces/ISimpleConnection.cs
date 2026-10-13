@@ -42,6 +42,15 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		void Configure(string name, Action<Func<IModel>> action, bool ignoreException = false);
 
 		/// <summary>
+		/// Removes a cached configuration entry, so the next <see cref="Configure"/> call
+		/// with the same name runs its action again (e.g. after the queue or exchange was deleted).
+		/// </summary>
+		/// <param name="name">Configuration entry name.</param>
+		void RemoveConfiguration(string name)
+		{
+		}
+
+		/// <summary>
 		/// Executes an action immediately on the current connection, using a channel obtained from the factory.
 		/// </summary>
 		/// <param name="action">The action to perform, receiving a channel factory function.</param>

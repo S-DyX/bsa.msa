@@ -98,16 +98,16 @@ namespace Bsa.Msa.Autofac
 
 			builder.RegisterType<BusManager>()
 				.As<IBusManager>()
-				.InstancePerDependency();
+				.SingleInstance();
 			builder
 				.RegisterType<SimpleBus>()
 				.As<ISimpleBus>()
-				.InstancePerDependency();
+				.SingleInstance();
 
 			builder
 				.RegisterType<SimpleConnection>()
 				.As<ISimpleConnection>()
-				.InstancePerDependency();
+				.SingleInstance();
 		}
 	}
 }

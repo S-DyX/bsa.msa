@@ -46,6 +46,17 @@ namespace Bsa.Msa.Common.Repeaters
 					return _action;
 				}
 			}
+
+			public bool HasPending
+			{
+				get
+				{
+					lock (_syncLock)
+					{
+						return _operationsQueued > 0;
+					}
+				}
+			}
 		}
 
 		private const int MaxQueueLength = 1;
@@ -56,7 +67,8 @@ namespace Bsa.Msa.Common.Repeaters
 
 		private OperationsQueue _operationsQueue;
 
-		private bool _isProcessing;
+		// 1 while a thread drains the queue; changed only through Interlocked.
+		private int _isProcessing;
 
 		private Timer _timer;
 
@@ -98,7 +110,9 @@ namespace Bsa.Msa.Common.Repeaters
 		{
 			if (null == this._timer)
 			{
-				this._timer = new Timer(HandleTimerCallback, null, _dueTime, _period);
+				// "start" is a time of day, the same as in AllowConcurrenceModeRepeater.
+				var startDelay = RepeaterSchedule.GetStartDelay(_dueTime);
+				this._timer = new Timer(HandleTimerCallback, null, startDelay, _period);
 			}
 		}
 
@@ -107,34 +121,46 @@ namespace Bsa.Msa.Common.Repeaters
 			try
 			{
 				this._operationsQueue.Enqueue();
-				if (_isProcessing)
-					return;
 
-
-				_isProcessing = true;
-				Action<CancellationToken> operation = this._operationsQueue.Dequeue();
-				while (null != operation)
+				// Re-check after release: an operation enqueued while the previous
+				// owner was finishing would otherwise be lost.
+				while (this._operationsQueue.HasPending
+					&& Interlocked.CompareExchange(ref _isProcessing, 1, 0) == 0)
 				{
 					try
 					{
-						operation(_cancellationTokenSource.Token);
+						DrainQueue();
 					}
-					catch (Exception e)
+					finally
 					{
-						_logger?.Error($"Name:{_name};Message:{e.Message}", e);
-						RaiseError(e);
+						Volatile.Write(ref _isProcessing, 0);
 					}
-
-					operation = this._operationsQueue.Dequeue();
 				}
-
-				_isProcessing = false;
 			}
 			catch (Exception ex)
 			{
 				_logger?.Error($"Name:{_name};Message:{ex.Message}", ex);
 			}
 
+		}
+
+		private void DrainQueue()
+		{
+			var operation = this._operationsQueue.Dequeue();
+			while (null != operation)
+			{
+				try
+				{
+					operation(_cancellationTokenSource.Token);
+				}
+				catch (Exception e)
+				{
+					_logger?.Error($"Name:{_name};Message:{e.Message}", e);
+					RaiseError(e);
+				}
+
+				operation = this._operationsQueue.Dequeue();
+			}
 		}
 
 		private void RaiseError(Exception ex)

@@ -2,6 +2,7 @@
 using Bsa.Msa.Common.Services.Interfaces;
 using Bsa.Msa.Common.Services.MessageHandling;
 using Bsa.Msa.RabbitMq.Core.Interfaces;
+using System;
 using System.Collections.Concurrent;
 
 namespace Bsa.Msa.RabbitMq.Core
@@ -12,7 +13,8 @@ namespace Bsa.Msa.RabbitMq.Core
 		private readonly IMessageHandlerFactory _factory;
 
 		private readonly ConcurrentDictionary<string, IMessageHandlerSettings> _handlerSettings = new ConcurrentDictionary<string, IMessageHandlerSettings>();
-		private readonly ConcurrentDictionary<string, object> _handlers = new ConcurrentDictionary<string, object>();
+		private readonly ConcurrentDictionary<string, Lazy<IMessageHandler>> _handlers =
+			new ConcurrentDictionary<string, Lazy<IMessageHandler>>();
 
 		/// <summary>
 		/// Ctor
@@ -44,39 +46,49 @@ namespace Bsa.Msa.RabbitMq.Core
 		/// <inheritdoc />
 		public bool Handle<TMessage>(string subscriptionEndpoint, TMessage message)
 		{
-			if (string.IsNullOrEmpty(subscriptionEndpoint))
+			if (string.IsNullOrEmpty(subscriptionEndpoint)) return false;
+
+			if (!_handlerSettings.TryGetValue(subscriptionEndpoint, out var settings))
 				return false;
 
-			if (_handlerSettings.ContainsKey(subscriptionEndpoint))
+			var handler = GetHandler<TMessage>(subscriptionEndpoint, settings);
+			if (handler is IMessageHandler<TMessage> syncHandler)
 			{
-				var messageHandlerSettings = _handlerSettings[subscriptionEndpoint];
-				IMessageHandler<TMessage> messageHandler = null;
-				IMessageHandlerAsync<TMessage> messageHandlerAsync = null;
-
-				object handler;
-				if (_handlers.TryGetValue(subscriptionEndpoint, out handler))
-				{
-					messageHandler = handler as IMessageHandler<TMessage>;
-					messageHandlerAsync = handler as IMessageHandlerAsync<TMessage>;
-				}
-				if (messageHandler == null)
-				{
-					messageHandler = _factory.Create<TMessage>(messageHandlerSettings.Type, messageHandlerSettings, null, null) as IMessageHandler<TMessage>;
-					_handlers.TryAdd(subscriptionEndpoint, messageHandler);
-					messageHandler?.Handle(message);
-					return true;
-				}
-				if (messageHandlerAsync == null)
-				{
-					messageHandlerAsync = _factory.Create<TMessage>(messageHandlerSettings.Type, messageHandlerSettings, null, null) as IMessageHandlerAsync<TMessage>;
-					_handlers.TryAdd(subscriptionEndpoint, messageHandler);
-					messageHandlerAsync?.HandleAsync(message).ConfigureAwait(false);
-					return true;
-				}
-
-
+				syncHandler.Handle(message);
+				return true;
 			}
+
+			if (handler is IMessageHandlerAsync<TMessage> asyncHandler)
+			{
+				asyncHandler.HandleAsync(message).GetAwaiter().GetResult();
+				return true;
+			}
+
+			// Unknown handler type: let the caller deliver the message through the broker.
 			return false;
+		}
+
+		private IMessageHandler GetHandler<TMessage>(
+			string subscriptionEndpoint,
+			IMessageHandlerSettings settings)
+		{
+			var lazy = _handlers.GetOrAdd(
+				subscriptionEndpoint,
+				_ => new Lazy<IMessageHandler>(() => _factory.Create<TMessage>(
+					settings.Type,
+					settings,
+					null,
+					null)));
+			try
+			{
+				return lazy.Value;
+			}
+			catch
+			{
+				// Lazy caches the exception, drop it so the next call retries.
+				_handlers.TryRemove(subscriptionEndpoint, out _);
+				throw;
+			}
 		}
 	}
 }

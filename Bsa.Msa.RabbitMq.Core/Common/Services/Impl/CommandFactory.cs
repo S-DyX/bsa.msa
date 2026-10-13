@@ -3,6 +3,7 @@ using Bsa.Msa.Common.Services.Interfaces;
 using Bsa.Msa.Common.Settings;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace Bsa.Msa.Common.Services.Impl
@@ -40,7 +41,11 @@ namespace Bsa.Msa.Common.Services.Impl
 				if (constructor != null)
 					return Activator.CreateInstance(handlerType) as ICommand;
 
-				var constructors = handlerType.GetConstructors();
+				// Only one constructor is used, the one with the most parameters (as DI containers do):
+				// collecting parameters of every constructor produced an invalid argument list.
+				var constructors = handlerType.GetConstructors()
+					.OrderByDescending(x => x.GetParameters().Length)
+					.Take(1);
 				var result = new List<object>();
 				foreach (var c in constructors)
 				{
@@ -72,7 +77,7 @@ namespace Bsa.Msa.Common.Services.Impl
 			}
 			catch (Exception e)
 			{
-				_localLogger.Error($"Can not create instance of command type:{commandType}; TypeOf:{handlerType}; Message:{e.Message}", e);
+				_localLogger?.Error($"Can not create instance of command type:{commandType}; TypeOf:{handlerType}; Message:{e.Message}", e);
 				throw;
 			}
 		}
