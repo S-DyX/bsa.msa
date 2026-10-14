@@ -14,6 +14,15 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		void Register(IMessageHandlerSettings settings);
 
 		/// <summary>
+		/// Removes the handler of an endpoint, e.g. when the handler is stopped:
+		/// messages to the endpoint then go through the broker.
+		/// </summary>
+		/// <param name="subscriptionEndpoint">Endpoint of the handler.</param>
+		void Unregister(string subscriptionEndpoint)
+		{
+		}
+
+		/// <summary>
 		/// Handles a message of type <typeparamref name="TMessage"/> targeted to a specific subscription endpoint.
 		/// </summary>
 		/// <typeparam name="TMessage">The type of the message to handle.</typeparam>

@@ -44,6 +44,15 @@ namespace Bsa.Msa.RabbitMq.Core
 		}
 
 		/// <inheritdoc />
+		public void Unregister(string subscriptionEndpoint)
+		{
+			if (string.IsNullOrEmpty(subscriptionEndpoint)) return;
+
+			_handlerSettings.TryRemove(subscriptionEndpoint, out _);
+			_handlers.TryRemove(subscriptionEndpoint, out _);
+		}
+
+		/// <inheritdoc />
 		public bool Handle<TMessage>(string subscriptionEndpoint, TMessage message)
 		{
 			if (string.IsNullOrEmpty(subscriptionEndpoint)) return false;

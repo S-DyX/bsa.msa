@@ -24,7 +24,13 @@
 dotnet build Bsa.Msa.sln
 ```
 
-Тестовых проектов нет. Для проверки — пример хоста (нужен запущенный RabbitMQ, настройки в `appsettings.json`, секция `rabbitMq`).
+Тесты — `Bsa.Msa.RabbitMq.Core.Tests` (MSTest + Moq, `net10.0`), брокер не нужен: `SimpleBus` проверяется на замоканном `IModel` (`Fakes/ChannelHarness`):
+
+```
+dotnet test Bsa.Msa.RabbitMq.Core.Tests/Bsa.Msa.RabbitMq.Core.Tests.csproj
+```
+
+Не покрыты тестами: `SimpleConnection` и `ServiceUnitManager` (нужен брокер — проверка через пример хоста), `RabbitMQ.Client/`, `Old/`, хелперы `Common/Helpers`, DTO настроек. Внутренние типы видны тестам через `InternalsVisibleTo`.
 
 ## Что не читать и не трогать
 
@@ -39,6 +45,13 @@ dotnet build Bsa.Msa.sln
 - **Локальная шина.** `ILocalBus` / `LocalBus`: если обработчик очереди зарегистрирован в текущем процессе, сообщение доставляется ему напрямую, минуя брокер.
 - **Обработчики.** `IMessageHandler<TMessage>` (`Handle`) и `IMessageHandlerAsync<TMessage>` (`HandleAsync`). Создаются через `IMessageHandlerFactory` по имени типа из `services.json`. Подписка — `SubscriberBase<TMessage>` (`ISubscriber`), фабрика — `SubscriberFactory`.
 - **Команды.** `ICommand` (`Execute`) — задачи по расписанию. Расписание (`ICommandSchedule`, `Common/Services/Commands/Scheduling`) разбирает `CommandScheduleParser` из настроек команды в `services.json`; повторители из `Common/Repeaters` взводят одноразовый таймер `ScheduleTimer` на следующий запуск (длинные задержки — шагами по 1 мин). `isConcurrentMode: false` — запуски не пересекаются. Новая команда создаётся и освобождается на каждый запуск; `CancellationToken` в конструкторе команды отменяется при остановке.
+
+### Источник обработчиков и команд, управление на лету
+
+- `IServiceDefinitionSource` (`Common/Services/Sources`) отдаёт `ServiceDefinitions` (обработчики `MessageHandlerSettings` и команды `CommandSettings`, ключ — `name`). По умолчанию — `ServicesJsonDefinitionSource` (services.json): если источник не зарегистрирован в DI, `ServiceUnitManager` берёт его сам.
+- Свой источник (БД и т. п.): реализовать `IServiceDefinitionSource` или унаследовать `PollingServiceDefinitionSource` (опрос по таймеру, событие `Changed` только при изменении). Настройки из строк БД — `ServiceDefinitionFactory.CreateHandler/CreateCommand` (ключи как в services.json) или `FromJson` (документ в формате services.json). Подключение: `builder.RegisterType<DbSource>().As<IServiceDefinitionSource>().SingleInstance();`.
+- `IServiceUnitController` (реализует `ServiceUnitManager`): `GetUnits`, `Add/Start/Stop/RemoveHandler`, `Add/Start/Stop/RemoveCommand`, `Reload`. Получить: `(IServiceUnitController)container.Resolve<IServiceUnitManager>()` или зарегистрировать тот же singleton как `IServiceUnitController`.
+- При `Changed`/`Reload`: новые запускаются, удалённые останавливаются, изменённые (по значениям настроек) перезапускаются. Остановленные через контроллер остаются остановленными. Добавленные через контроллер источник не удаляет. Остановленный обработчик снимается и с локальной шины (`ILocalBus.Unregister`).
 
 ### Расписание команд (`services.json`)
 

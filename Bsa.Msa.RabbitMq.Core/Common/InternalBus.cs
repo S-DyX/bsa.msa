@@ -107,7 +107,7 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 		/// serializer types) which the RabbitMQ client can not send: a retry
 		/// of such a message failed and the message was lost.
 		/// </summary>
-		private static IDictionary<string, object> NormalizeHeaders(IDictionary<string, object> headers)
+		internal static IDictionary<string, object> NormalizeHeaders(IDictionary<string, object> headers)
 		{
 			var result = new Dictionary<string, object>();
 			if (headers == null) return result;

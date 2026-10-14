@@ -660,7 +660,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			return true;
 		}
 
-		private static int GetRetryCount(IDictionary<string, object> headers)
+		internal static int GetRetryCount(IDictionary<string, object> headers)
 		{
 			if (headers == null || !headers.TryGetValue(RetryCountHeader, out var value))
 				return 0;

@@ -156,6 +156,10 @@ namespace Bsa.Msa.RabbitMq.Core
 			_isRun = false;
 			DisposeInternal();
 
+			// A stopped handler must not receive messages through the local bus.
+			if (!_messageHandlerSettings.UseExchange)
+				_localBus?.Unregister(_messageHandlerSettings.SubscriptionEndpoint);
+
 			// The bus owns the consumer, the workers and the connection of this subscriber.
 			_simpleBus.Shutdown = null;
 			_simpleBus.Dispose();
