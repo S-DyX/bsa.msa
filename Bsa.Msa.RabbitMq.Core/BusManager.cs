@@ -51,28 +51,34 @@ namespace Bsa.Msa.RabbitMq.Core
 		/// <inheritdoc />
 		public void Send<TMessage>(string queue, TMessage message, int? ttl = null, bool forceSend = false) where TMessage : class
 		{
+			// Without a queue the message goes to the exchange of the type,
+			// so every subscribed queue (useExchange) receives it.
+			if (string.IsNullOrEmpty(queue))
+			{
+				Bus.Publish(message, string.Empty, null, ttl);
+				return;
+			}
+
+			if (!forceSend && TryHandleLocally(queue, message))
+				return;
+
+			// Broker errors are not retried here: a blind retry duplicated messages.
+			Bus.Send(queue, message, ttl);
+		}
+
+		private bool TryHandleLocally<TMessage>(string queue, TMessage message)
+		{
+			if (_localBus == null) return false;
+
 			try
 			{
-				if (string.IsNullOrEmpty(queue))
-				{
-					Bus.Publish<TMessage>(message);
-				}
-				else
-				{
-					if (forceSend || _localBus == null || !_localBus.Handle(queue, message))
-						Bus.Send<TMessage>(queue, message, ttl);
-				}
+				return _localBus.Handle(queue, message);
 			}
 			catch (Exception)
 			{
-				if (string.IsNullOrEmpty(queue))
-				{
-					Bus.Publish<TMessage>(message);
-				}
-				else
-				{
-					Bus.Send<TMessage>(queue, message, ttl);
-				}
+				// The local handler failed: the message goes through the broker,
+				// where the handler retry settings apply.
+				return false;
 			}
 		}
 
@@ -145,10 +151,8 @@ namespace Bsa.Msa.RabbitMq.Core
 		/// <inheritdoc />
 		public void Dispose()
 		{
-			using (Bus)
-			{
-				
-			}
+			// The field, not the Bus property: disposing must not reconnect.
+			_simpleBus.Dispose();
 		}
 
 		/// <inheritdoc />

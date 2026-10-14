@@ -56,6 +56,11 @@ namespace Bsa.Msa.Common.Services.Impl
 						{
 							result.Add(settings);
 						}
+						else if (p.ParameterType == typeof(CancellationToken))
+						{
+							// Cancelled on Stop: a long command can finish early.
+							result.Add(cancellationToken);
+						}
 						else
 						{
 							var inst = localContainer.Resolve(p.ParameterType);

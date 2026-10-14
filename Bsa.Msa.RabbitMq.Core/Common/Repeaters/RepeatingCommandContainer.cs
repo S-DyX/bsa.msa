@@ -19,7 +19,6 @@ namespace Bsa.Msa.Common.Repeaters
 		private readonly ILocalLogger _logger;
 
 		private IRepeater _repeater;
-		private ICommand _command;
 		private Thread _task;
 
 		public RepeatingCommandContainer(
@@ -52,7 +51,6 @@ namespace Bsa.Msa.Common.Repeaters
 				{
 					var settings = (ISettings)_settings;
 					var command = _commandFactory.Create(_settings.Type, settings, cancellationToken);
-					_command = command;
 					try
 					{
 						_logger?.Info($"Executing command: {_settings.Name}");
@@ -61,9 +59,9 @@ namespace Bsa.Msa.Common.Repeaters
 					}
 					finally
 					{
-						// A new command is created on every tick, so each one is disposed.
+						// A new command is created on every run and disposed after it.
+						// Stop does not dispose a running command: it cancels the token.
 						command.Dispose();
-						Interlocked.CompareExchange(ref _command, null, command);
 					}
 				}
 			);
@@ -76,8 +74,6 @@ namespace Bsa.Msa.Common.Repeaters
 			if (_repeater != null)
 				_repeater.Dispose();
 
-			if (_command != null)
-				_command.Dispose();
 		}
 
 

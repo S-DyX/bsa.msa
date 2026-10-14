@@ -23,6 +23,9 @@ namespace Bsa.Msa.RabbitMq.Core
 
 		private IConnection _connection;
 
+		// Set while AfterConnect handlers run, guarded by _sync.
+		private bool _isInAfterConnect;
+
 		private static readonly TimeSpan CloseTimeout = TimeSpan.FromSeconds(5);
 
 		private IConnection Connection
@@ -295,6 +298,17 @@ namespace Bsa.Msa.RabbitMq.Core
 					}
 					return;
 				}
+				catch (OperationInterruptedException ex) when (IsRejectedByBroker(ex))
+				{
+					// The broker rejected the declaration (e.g. other queue arguments):
+					// a retry gives the same result, so the error is reported at once.
+					_logger?.Error($"Configuration '{name}' was rejected: {ex.Message}", ex);
+					if (ignoreException)
+						return;
+					throw new InvalidOperationException(
+						$"Configuration '{name}' was rejected by the broker: {ex.Message}",
+						ex);
+				}
 				catch (Exception ex)
 				{
 					_logger?.Error(ex.ToString(), ex);
@@ -337,6 +351,11 @@ namespace Bsa.Msa.RabbitMq.Core
 							action.Invoke(() => CreateModel(config.Key));
 						}
 						isSuscribed = true;
+					}
+					catch (OperationInterruptedException ex) when (IsRejectedByBroker(ex))
+					{
+						_logger?.Error($"Configuration '{config.Key}' was rejected: {ex.Message}", ex);
+						break;
 					}
 					catch (Exception ex)
 					{
@@ -427,12 +446,34 @@ namespace Bsa.Msa.RabbitMq.Core
 
 				BeforeConnect?.Invoke();
 				_model = Connection.CreateModel();
-				AfterConnect?.Invoke();
+
+				// A handler that recreates the channel must not run the handlers
+				// again: a failing declaration turned into endless recursion.
+				if (_isInAfterConnect) return;
+
+				_isInAfterConnect = true;
+				try
+				{
+					AfterConnect?.Invoke();
+				}
+				finally
+				{
+					_isInAfterConnect = false;
+				}
 			}
 		}
 
+		private static bool IsRejectedByBroker(OperationInterruptedException ex)
+		{
+			var code = ex.ShutdownReason?.ReplyCode;
+			return code == 403 || code == 404 || code == 406;
+		}
+
 		/// <inheritdoc />
-		public bool IsConnected => _model != null && _model.IsOpen && Connection != null && Connection.IsOpen;
+		/// <remarks>Only checks the state, the connection is not created here.</remarks>
+		public bool IsConnected =>
+			_model != null && _model.IsOpen
+			&& _connection != null && _connection.IsOpen;
 
 		/// <inheritdoc />
 		public void Dispose()

@@ -23,12 +23,32 @@ namespace Bsa.Msa.Common.Services.Impl
 		}
 		public IMessageHandler Create<TMessage>(string type, ISettings settings, ISimpleBus simpleBus, ILocalBus localBus)
 		{
+			var handlerType = ResolveHandlerType(type);
+			return CreateInstance(handlerType, settings, simpleBus, localBus) as IMessageHandler;
+		}
+
+		public IMessageHandler<TMessage, TResponse> Create<TMessage, TResponse>(string type, ISettings settings, ISimpleBus simpleBus, ILocalBus localBus)
+		{
+			var handlerType = ResolveHandlerType(type);
+			var handler = CreateInstance(handlerType, settings, simpleBus, localBus);
+			return handler as IMessageHandler<TMessage, TResponse>
+				?? throw new InvalidOperationException(
+					$"{handlerType} does not implement IMessageHandler<{typeof(TMessage).Name}, {typeof(TResponse).Name}>");
+		}
+
+		private Type ResolveHandlerType(string type)
+		{
 			var handlerType = registry.ResolveHandler(type);
 			if (handlerType == null)
 				throw new InvalidOperationException($"Type not found {type}");
+			return handlerType;
+		}
+
+		private object CreateInstance(Type handlerType, ISettings settings, ISimpleBus simpleBus, ILocalBus localBus)
+		{
 			var constructor = handlerType.GetConstructor(Type.EmptyTypes);
 			if (constructor != null)
-				return Activator.CreateInstance(handlerType) as IMessageHandler;
+				return Activator.CreateInstance(handlerType);
 
 			// Only one constructor is used, the one with the most parameters (as DI containers do):
 			// collecting parameters of every constructor produced an invalid argument list.
@@ -81,12 +101,7 @@ namespace Bsa.Msa.Common.Services.Impl
 				}
 			}
 			object[] args = result.ToArray();
-			return Activator.CreateInstance(handlerType, args) as IMessageHandler;
-		}
-
-		public IMessageHandler<TMessage, TResponse> Create<TMessage, TResponse>(string type, ISettings settings, ISimpleBus simpleBus, ILocalBus localBus)
-		{
-			throw new System.NotImplementedException();
+			return Activator.CreateInstance(handlerType, args);
 		}
 
 

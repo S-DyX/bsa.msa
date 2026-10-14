@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -77,6 +78,7 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 						var obj = _serializeService.Deserialize<InternalBusItem>(value);
 						if (obj.Id == null)
 							obj.Id = Guid.NewGuid().ToString();
+						obj.Headers = NormalizeHeaders(obj.Headers);
 						obj.FileName = file;
 						//if (_concurrent.ContainsKey(obj.Id))
 						//{
@@ -100,6 +102,63 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 				_isReady = true;
 			}
 		}
+		/// <summary>
+		/// After a restart header values come back as JsonElement (or other
+		/// serializer types) which the RabbitMQ client can not send: a retry
+		/// of such a message failed and the message was lost.
+		/// </summary>
+		private static IDictionary<string, object> NormalizeHeaders(IDictionary<string, object> headers)
+		{
+			var result = new Dictionary<string, object>();
+			if (headers == null) return result;
+
+			foreach (var pair in headers)
+				result[pair.Key] = ToHeaderValue(pair.Value);
+			return result;
+		}
+
+		private static object ToHeaderValue(object value)
+		{
+			switch (value)
+			{
+				case null:
+				case string _:
+				case byte[] _:
+				case bool _:
+				case int _:
+				case long _:
+				case double _:
+				case decimal _:
+					return value;
+				case JsonElement element:
+					return FromJson(element);
+				default:
+					return value.ToString();
+			}
+		}
+
+		private static object FromJson(JsonElement element)
+		{
+			switch (element.ValueKind)
+			{
+				case JsonValueKind.Number:
+					if (element.TryGetInt32(out var intValue)) return intValue;
+					if (element.TryGetInt64(out var longValue)) return longValue;
+					return element.GetDouble();
+				case JsonValueKind.String:
+					return element.GetString();
+				case JsonValueKind.True:
+					return true;
+				case JsonValueKind.False:
+					return false;
+				case JsonValueKind.Null:
+				case JsonValueKind.Undefined:
+					return null;
+				default:
+					return element.GetRawText();
+			}
+		}
+
 		public void Clear(string queue)
 		{
 			lock (_lock)

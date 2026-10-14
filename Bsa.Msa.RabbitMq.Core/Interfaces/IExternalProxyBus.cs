@@ -6,348 +6,482 @@ using System.Linq;
 using System.Text.Json;
 using Bsa.Msa.Common.Services.MessageHandling;
 
-namespace Bsa.Msa.RabbitMq.Core.Interfaces;
-
-public sealed class ExternalProxyBus : ISimpleBus
+namespace Bsa.Msa.RabbitMq.Core.Interfaces
 {
-	private readonly string _basePath;
-	private readonly ConcurrentDictionary<string, List<Action<object>>> _subscribers = new();
-	private readonly object _fileLock = new object();
-	private bool _disposed;
-
-	public ExternalProxyBus(string basePath = null)
+	/// <summary>
+	/// File-based <see cref="ISimpleBus"/> without a broker: queues and
+	/// exchanges are folders, messages are JSON files. A message delivered
+	/// to a subscriber or read by <see cref="GetMessageExchange{TMessage}(string)"/>
+	/// is removed from the queue. Intended for tests and local runs.
+	/// </summary>
+	public sealed class ExternalProxyBus : ISimpleBus
 	{
-		_basePath = basePath ?? Path.Combine(Directory.GetCurrentDirectory(), "SimpleBus");
-		Directory.CreateDirectory(Path.Combine(_basePath, "Queues"));
-		Directory.CreateDirectory(Path.Combine(_basePath, "Exchanges"));
-	}
+		private readonly string _basePath;
 
-	public bool IsModel => true;
-	public bool IsConnected => true;
-	public Action Shutdown { get; set; }
+		private readonly ISimpleBusNaming _busNaming;
 
-	public void Dispose()
-	{
-		if (_disposed) return;
-		_disposed = true;
-		Shutdown?.Invoke();
-	}
+		private readonly ConcurrentDictionary<string, List<Action<object>>> _subscribers =
+			new ConcurrentDictionary<string, List<Action<object>>>();
 
-	#region Вспомогательные методы работы с файловой системой
+		// Guards read-modify-write of the bindings files.
+		private readonly object _fileLock = new object();
 
-	private string GetQueuePath(string queueName) => Path.Combine(_basePath, "Queues", queueName);
-	private string GetExchangePath(string exchangeName) => Path.Combine(_basePath, "Exchanges", exchangeName);
-	private string GetExchangeBindingsPath(string exchangeName) => Path.Combine(GetExchangePath(exchangeName), "bindings.json");
+		private bool _disposed;
 
-	private void EnsureQueue(string queueName)
-	{
-		var path = GetQueuePath(queueName);
-		if (!Directory.Exists(path))
+		private const string ConfigFileName = "config.json";
+
+		private const string BindingsFileName = "bindings.json";
+
+		private const string AllTopics = "#";
+
+		private static readonly JsonSerializerOptions WriteOptions =
+			new JsonSerializerOptions { WriteIndented = true };
+
+		/// <summary>
+		/// Creates the bus.
+		/// </summary>
+		/// <param name="basePath">Root folder; "SimpleBus" in the current folder by default.</param>
+		/// <param name="busNaming">Queue and exchange naming, the same as for RabbitMQ by default.</param>
+		public ExternalProxyBus(string basePath = null, ISimpleBusNaming busNaming = null)
 		{
-			Directory.CreateDirectory(path);
-			var config = new { Durable = true };
-			var json = JsonSerializer.Serialize(config);
-			File.WriteAllText(Path.Combine(path, "config.json"), json);
+			_basePath = basePath ?? Path.Combine(Directory.GetCurrentDirectory(), "SimpleBus");
+			_busNaming = busNaming ?? new DefaultSimpleBusNaming();
+			Directory.CreateDirectory(Path.Combine(_basePath, "Queues"));
+			Directory.CreateDirectory(Path.Combine(_basePath, "Exchanges"));
 		}
-	}
 
-	private void EnsureExchange(string exchangeName)
-	{
-		var path = GetExchangePath(exchangeName);
-		if (!Directory.Exists(path))
+		/// <inheritdoc />
+		public bool IsModel => true;
+
+		/// <inheritdoc />
+		public bool IsConnected => true;
+
+		/// <inheritdoc />
+		public Action Shutdown { get; set; }
+
+		/// <inheritdoc />
+		public void Dispose()
 		{
-			Directory.CreateDirectory(path);
-			var config = new { Type = "topic", Durable = true };
-			var json = JsonSerializer.Serialize(config);
-			File.WriteAllText(Path.Combine(path, "config.json"), json);
-			File.WriteAllText(Path.Combine(path, "bindings.json"), "[]");
+			if (_disposed) return;
+
+			_disposed = true;
+			Shutdown?.Invoke();
 		}
-	}
 
-	private List<Binding> GetBindings(string exchangeName)
-	{
-		var path = GetExchangeBindingsPath(exchangeName);
-		if (!File.Exists(path)) return new List<Binding>();
-		try
+		/// <inheritdoc />
+		public void Send<TMessage>(TMessage message, int? ttl = null) where TMessage : class
 		{
-			var json = File.ReadAllText(path);
-			return JsonSerializer.Deserialize<List<Binding>>(json) ?? new List<Binding>();
+			Send(_busNaming.GetQueueName<TMessage>(), message, ttl);
 		}
-		catch
+
+		/// <inheritdoc />
+		public void Send<TMessage>(string queue, TMessage message, int? ttl = null) where TMessage : class
 		{
-			return new List<Binding>();
+			EnsureQueue(queue);
+			Deliver(queue, message, ttl);
 		}
-	}
 
-	private void SaveBindings(string exchangeName, List<Binding> bindings)
-	{
-		var path = GetExchangeBindingsPath(exchangeName);
-		var json = JsonSerializer.Serialize(bindings, new JsonSerializerOptions { WriteIndented = true });
-		File.WriteAllText(path, json);
-	}
-
-	private bool MatchesTopic(string topic, string pattern)
-	{
-		if (pattern == "#") return true;
-		if (pattern == "*") return true; // упрощённо
-		return topic == pattern;
-	}
-
-	private void SaveMessage<TMessage>(string queueName, TMessage message, int? ttl)
-	{
-		var queuePath = GetQueuePath(queueName);
-		var envelope = new MessageEnvelope<TMessage>
+		/// <inheritdoc />
+		public void SendSelf<TMessage>(TMessage message) where TMessage : class
 		{
-			Body = message,
-			CreatedAt = DateTime.UtcNow,
-			TtlSeconds = ttl
-		};
-		var json = JsonSerializer.Serialize(envelope, new JsonSerializerOptions { WriteIndented = true });
-		var fileName = $"{Guid.NewGuid():N}.json";
-		var filePath = Path.Combine(queuePath, fileName);
-		File.WriteAllText(filePath, json);
-	}
+			Send(message, null);
+		}
 
-	private List<TMessage> GetMessages<TMessage>(string queueName, int? count = null)
-	{
-		var queuePath = GetQueuePath(queueName);
-		if (!Directory.Exists(queuePath)) return new List<TMessage>();
+		/// <inheritdoc />
+		public void Publish<TMessage>(TMessage message) where TMessage : class
+		{
+			Publish(message, string.Empty, null, null);
+		}
 
-		var files = Directory.GetFiles(queuePath, "*.json");
-		var envelopes = new List<MessageEnvelope<TMessage>>();
+		/// <inheritdoc />
+		public void Publish<TMessage>(TMessage message, string topic, string exchangeName = null) where TMessage : class
+		{
+			Publish(message, topic, exchangeName, null);
+		}
 
-		foreach (var file in files)
+		/// <inheritdoc />
+		public void Publish<TMessage>(TMessage message, string topic, string exchangeName, int? ttl) where TMessage : class
+		{
+			var exchange = string.IsNullOrEmpty(exchangeName)
+				? _busNaming.GetExchangeName<TMessage>()
+				: exchangeName;
+			EnsureExchange(exchange);
+			foreach (var binding in GetBindings(exchange))
+			{
+				if (!MatchesTopic(topic, binding.TopicPattern)) continue;
+
+				EnsureQueue(binding.QueueName);
+				Deliver(binding.QueueName, message, ttl);
+			}
+		}
+
+		/// <inheritdoc />
+		public void Subscribe<TMessage>(string queueName, Action<TMessage> action, IMessageHandlerSettings messageHandlerSettings)
+		{
+			EnsureQueue(queueName);
+			var list = _subscribers.GetOrAdd(queueName, _ => new List<Action<object>>());
+			lock (list)
+			{
+				list.Add(msg => action((TMessage)msg));
+			}
+		}
+
+		/// <inheritdoc />
+		public void SubscribeExchange<TMessage>(string queueName, Action<TMessage> action, IMessageHandlerSettings messageHandlerSettings)
+		{
+			Subscribe(queueName, action, messageHandlerSettings);
+
+			var exchange = _busNaming.GetExchangeName<TMessage>();
+			var pattern = string.IsNullOrEmpty(messageHandlerSettings?.RoutingKey)
+				? AllTopics
+				: messageHandlerSettings.RoutingKey;
+			EnsureExchange(exchange);
+			lock (_fileLock)
+			{
+				var bindings = GetBindings(exchange);
+				if (bindings.Any(b => b.QueueName == queueName && b.TopicPattern == pattern))
+					return;
+
+				bindings.Add(new Binding { QueueName = queueName, TopicPattern = pattern });
+				SaveBindings(exchange, bindings);
+			}
+		}
+
+		/// <inheritdoc />
+		public List<TMessage> GetMessageExchange<TMessage>(string queueName)
+		{
+			return TakeMessages<TMessage>(queueName, null);
+		}
+
+		/// <inheritdoc />
+		public List<TMessage> GetMessageExchange<TMessage>(string queueName, int count)
+		{
+			return TakeMessages<TMessage>(queueName, count);
+		}
+
+		/// <inheritdoc />
+		public void Delete<TMessage>(string queue) where TMessage : class
+		{
+			Delete(queue);
+			DeleteExchange(_busNaming.GetExchangeName<TMessage>());
+		}
+
+		/// <inheritdoc />
+		public void Delete<TMessage>() where TMessage : class
+		{
+			DeleteExchange(_busNaming.GetExchangeName<TMessage>());
+		}
+
+		/// <inheritdoc />
+		public void Delete(string queue)
+		{
+			var queuePath = GetQueuePath(queue);
+			if (Directory.Exists(queuePath))
+				Directory.Delete(queuePath, true);
+			_subscribers.TryRemove(queue, out _);
+
+			var exchangesDir = Path.Combine(_basePath, "Exchanges");
+			if (!Directory.Exists(exchangesDir)) return;
+
+			lock (_fileLock)
+			{
+				foreach (var exchangeDir in Directory.GetDirectories(exchangesDir))
+				{
+					var bindingsPath = Path.Combine(exchangeDir, BindingsFileName);
+					var bindings = ReadBindings(bindingsPath);
+					var newBindings = bindings.Where(b => b.QueueName != queue).ToList();
+					if (newBindings.Count != bindings.Count)
+						File.WriteAllText(bindingsPath, JsonSerializer.Serialize(newBindings, WriteOptions));
+				}
+			}
+		}
+
+		/// <inheritdoc />
+		public void Purge(string queueName)
+		{
+			var queuePath = GetQueuePath(queueName);
+			if (!Directory.Exists(queuePath)) return;
+
+			foreach (var file in GetMessageFiles(queuePath))
+				TryDelete(file);
+		}
+
+		/// <inheritdoc />
+		public void Reconnect(string name = null)
+		{
+			// Nothing to reconnect in the file implementation.
+		}
+
+		/// <inheritdoc />
+		public IDisposable Respond<TRequest, TResponse>(Func<TRequest, TResponse> response)
+			where TRequest : class
+			where TResponse : class
+		{
+			return Respond(response, null);
+		}
+
+		/// <inheritdoc />
+		public IDisposable Respond<TRequest, TResponse>(Func<TRequest, TResponse> response, string queueName)
+			where TRequest : class
+			where TResponse : class
+		{
+			var requestQueue = queueName ?? _busNaming.GetQueueName<TRequest>();
+			var responseQueue = requestQueue + ".responses";
+			Action<object> handler = obj => Send(responseQueue, response((TRequest)obj));
+
+			EnsureQueue(requestQueue);
+			var list = _subscribers.GetOrAdd(requestQueue, _ => new List<Action<object>>());
+			lock (list)
+			{
+				list.Add(handler);
+			}
+
+			return new DisposableAction(() =>
+			{
+				lock (list)
+				{
+					list.Remove(handler);
+				}
+			});
+		}
+
+		private void Deliver<TMessage>(string queueName, TMessage message, int? ttl)
+		{
+			var file = SaveMessage(queueName, message, ttl);
+
+			// A delivered message is consumed; otherwise it waits in the queue.
+			if (InvokeSubscribers(queueName, message))
+				TryDelete(file);
+		}
+
+		private bool InvokeSubscribers<TMessage>(string queueName, TMessage message)
+		{
+			if (!_subscribers.TryGetValue(queueName, out var list)) return false;
+
+			Action<object>[] actions;
+			lock (list)
+			{
+				actions = list.ToArray();
+			}
+
+			if (actions.Length == 0) return false;
+
+			var isDelivered = true;
+			foreach (var action in actions)
+			{
+				try
+				{
+					action(message);
+				}
+				catch
+				{
+					// A handler must not break the bus; the message stays in the queue.
+					isDelivered = false;
+				}
+			}
+
+			return isDelivered;
+		}
+
+		private string SaveMessage<TMessage>(string queueName, TMessage message, int? ttl)
+		{
+			var envelope = new MessageEnvelope<TMessage>
+			{
+				Body = message,
+				CreatedAt = DateTime.UtcNow,
+				TtlMilliseconds = ttl
+			};
+			var json = JsonSerializer.Serialize(envelope, WriteOptions);
+			var filePath = Path.Combine(GetQueuePath(queueName), $"{Guid.NewGuid():N}.json");
+			File.WriteAllText(filePath, json);
+			return filePath;
+		}
+
+		private List<TMessage> TakeMessages<TMessage>(string queueName, int? count)
+		{
+			var queuePath = GetQueuePath(queueName);
+			if (!Directory.Exists(queuePath)) return new List<TMessage>();
+
+			var items = new List<KeyValuePair<string, MessageEnvelope<TMessage>>>();
+			foreach (var file in GetMessageFiles(queuePath))
+			{
+				var envelope = ReadEnvelope<TMessage>(file);
+				if (envelope == null) continue;
+
+				if (envelope.ExpiresAt < DateTime.UtcNow)
+				{
+					TryDelete(file);
+					continue;
+				}
+
+				items.Add(new KeyValuePair<string, MessageEnvelope<TMessage>>(file, envelope));
+			}
+
+			var ordered = items.OrderBy(x => x.Value.CreatedAt);
+			var taken = (count > 0 ? ordered.Take(count.Value) : ordered).ToList();
+
+			// Like BasicGet with ack: the returned messages leave the queue.
+			foreach (var item in taken)
+				TryDelete(item.Key);
+
+			return taken.Select(x => x.Value.Body).ToList();
+		}
+
+		private static MessageEnvelope<TMessage> ReadEnvelope<TMessage>(string file)
 		{
 			try
 			{
 				var json = File.ReadAllText(file);
-				var envelope = JsonSerializer.Deserialize<MessageEnvelope<TMessage>>(json);
-				if (envelope != null)
-				{
-					if (envelope.ExpiresAt.HasValue && envelope.ExpiresAt.Value < DateTime.UtcNow)
-					{
-						File.Delete(file);
-						continue;
-					}
-					envelopes.Add(envelope);
-				}
+				return JsonSerializer.Deserialize<MessageEnvelope<TMessage>>(json);
 			}
-			catch { /* игнорируем битые файлы */ }
-		}
-
-		var result = envelopes.OrderBy(e => e.CreatedAt).Select(e => e.Body).ToList();
-		if (count.HasValue && count.Value > 0 && result.Count > count.Value)
-			result = result.Take(count.Value).ToList();
-		return result;
-	}
-
-	private void InvokeSubscribers<TMessage>(string queueName, TMessage message)
-	{
-		if (_subscribers.TryGetValue(queueName, out var list))
-		{
-			lock (list)
+			catch
 			{
-				foreach (var action in list)
-				{
-					try { action(message); }
-					catch { /* обработчик не должен ломать шину */ }
-				}
+				// A broken file is skipped.
+				return null;
 			}
 		}
-	}
 
-	#endregion
-
-	#region Реализация ISimpleBus
-
-	public void Send<TMessage>(TMessage message, int? ttl = null) where TMessage : class
-	{
-		var defaultQueue = typeof(TMessage).Name;
-		Send(defaultQueue, message, ttl);
-	}
-
-	public void Send<TMessage>(string queue, TMessage message, int? ttl = null) where TMessage : class
-	{
-		EnsureQueue(queue);
-		SaveMessage(queue, message, ttl);
-		InvokeSubscribers(queue, message);
-	}
-
-	public void SendSelf<TMessage>(TMessage message) where TMessage : class
-	{
-		Send(message, null);
-	}
-
-	public void Publish<TMessage>(TMessage message) where TMessage : class
-	{
-		Publish(message, "", "default");
-	}
-
-	public void Publish<TMessage>(TMessage message, string topic, string exchangeName = null) where TMessage : class
-	{
-		if (string.IsNullOrEmpty(exchangeName)) exchangeName = "default";
-		EnsureExchange(exchangeName);
-
-		var bindings = GetBindings(exchangeName);
-		foreach (var binding in bindings)
+		private static IEnumerable<string> GetMessageFiles(string queuePath)
 		{
-			if (MatchesTopic(topic, binding.TopicPattern))
+			// config.json lives in the same folder and is not a message.
+			return Directory.GetFiles(queuePath, "*.json")
+				.Where(x => !string.Equals(Path.GetFileName(x), ConfigFileName, StringComparison.OrdinalIgnoreCase));
+		}
+
+		private string GetQueuePath(string queueName)
+		{
+			return Path.Combine(_basePath, "Queues", ToFileName(queueName));
+		}
+
+		private string GetExchangePath(string exchangeName)
+		{
+			return Path.Combine(_basePath, "Exchanges", ToFileName(exchangeName));
+		}
+
+		private string GetExchangeBindingsPath(string exchangeName)
+		{
+			return Path.Combine(GetExchangePath(exchangeName), BindingsFileName);
+		}
+
+		// Default names contain ':' which is not allowed in Windows file names.
+		private static string ToFileName(string name)
+		{
+			var invalid = Path.GetInvalidFileNameChars();
+			return new string(name.Select(x => invalid.Contains(x) ? '_' : x).ToArray());
+		}
+
+		private void EnsureQueue(string queueName)
+		{
+			var path = GetQueuePath(queueName);
+			if (Directory.Exists(path)) return;
+
+			Directory.CreateDirectory(path);
+			var json = JsonSerializer.Serialize(new { Durable = true });
+			File.WriteAllText(Path.Combine(path, ConfigFileName), json);
+		}
+
+		private void EnsureExchange(string exchangeName)
+		{
+			var path = GetExchangePath(exchangeName);
+			if (Directory.Exists(path)) return;
+
+			Directory.CreateDirectory(path);
+			var json = JsonSerializer.Serialize(new { Type = "topic", Durable = true });
+			File.WriteAllText(Path.Combine(path, ConfigFileName), json);
+			File.WriteAllText(Path.Combine(path, BindingsFileName), "[]");
+		}
+
+		private void DeleteExchange(string exchangeName)
+		{
+			var path = GetExchangePath(exchangeName);
+			lock (_fileLock)
 			{
-				EnsureQueue(binding.QueueName);
-				SaveMessage(binding.QueueName, message, null);
-				InvokeSubscribers(binding.QueueName, message);
+				if (Directory.Exists(path))
+					Directory.Delete(path, true);
 			}
 		}
-	}
 
-	public void Subscribe<TMessage>(string queueName, Action<TMessage> action, IMessageHandlerSettings messageHandlerSettings)
-	{
-		EnsureQueue(queueName);
-		var list = _subscribers.GetOrAdd(queueName, _ => new List<Action<object>>());
-		lock (list)
+		private List<Binding> GetBindings(string exchangeName)
 		{
-			list.Add(msg => action((TMessage)msg));
+			return ReadBindings(GetExchangeBindingsPath(exchangeName));
 		}
-	}
 
-	public void SubscribeExchange<TMessage>(string queueName, Action<TMessage> action, IMessageHandlerSettings messageHandlerSettings)
-	{
-		Subscribe(queueName, action, messageHandlerSettings);
-
-		string defaultExchange = "default";
-		EnsureExchange(defaultExchange);
-		var bindings = GetBindings(defaultExchange);
-		if (!bindings.Any(b => b.QueueName == queueName && b.TopicPattern == "#"))
+		private static List<Binding> ReadBindings(string path)
 		{
-			bindings.Add(new Binding { QueueName = queueName, TopicPattern = "#" });
-			SaveBindings(defaultExchange, bindings);
-		}
-	}
+			if (!File.Exists(path)) return new List<Binding>();
 
-	public List<TMessage> GetMessageExchange<TMessage>(string queueName)
-	{
-		return GetMessages<TMessage>(queueName);
-	}
-
-	public List<TMessage> GetMessageExchange<TMessage>(string queueName, int count)
-	{
-		return GetMessages<TMessage>(queueName, count);
-	}
-
-	public void Delete<TMessage>(string queue) where TMessage : class
-	{
-		Delete(queue);
-	}
-
-	public void Delete<TMessage>() where TMessage : class
-	{
-		Delete(typeof(TMessage).Name);
-	}
-
-	public void Delete(string queue)
-	{
-		var queuePath = GetQueuePath(queue);
-		if (Directory.Exists(queuePath))
-			Directory.Delete(queuePath, true);
-
-		_subscribers.TryRemove(queue, out _);
-
-		var exchangesDir = Path.Combine(_basePath, "Exchanges");
-		if (Directory.Exists(exchangesDir))
-		{
-			foreach (var exchangeDir in Directory.GetDirectories(exchangesDir))
+			try
 			{
-				var exchangeName = Path.GetFileName(exchangeDir);
-				var bindings = GetBindings(exchangeName);
-				var newBindings = bindings.Where(b => b.QueueName != queue).ToList();
-				if (newBindings.Count != bindings.Count)
-					SaveBindings(exchangeName, newBindings);
+				var json = File.ReadAllText(path);
+				return JsonSerializer.Deserialize<List<Binding>>(json) ?? new List<Binding>();
 			}
-		}
-	}
-
-	public void Purge(string queueName)
-	{
-		var queuePath = GetQueuePath(queueName);
-		if (Directory.Exists(queuePath))
-		{
-			foreach (var file in Directory.GetFiles(queuePath, "*.json"))
+			catch
 			{
-				try { File.Delete(file); }
-				catch { /* игнорируем */ }
+				return new List<Binding>();
 			}
 		}
-	}
 
-	public void Reconnect(string name = null)
-	{
-		// В файловой реализации ничего не делаем
-	}
+		private void SaveBindings(string exchangeName, List<Binding> bindings)
+		{
+			var json = JsonSerializer.Serialize(bindings, WriteOptions);
+			File.WriteAllText(GetExchangeBindingsPath(exchangeName), json);
+		}
 
-	public IDisposable Respond<TRequest, TResponse>(Func<TRequest, TResponse> response) where TRequest : class where TResponse : class
-	{
-		return Respond(response, null);
-	}
+		// An empty topic is a fanout publish: every binding receives it.
+		private static bool MatchesTopic(string topic, string pattern)
+		{
+			if (string.IsNullOrEmpty(topic)) return true;
+			if (pattern == AllTopics || pattern == "*") return true;
+			return topic == pattern;
+		}
 
-	public IDisposable Respond<TRequest, TResponse>(Func<TRequest, TResponse> response, string queueName) where TRequest : class where TResponse : class
-	{
-		string requestQueue = queueName ?? typeof(TRequest).Name;
-		string responseQueue = requestQueue + ".responses";
-
-		Action<object> handler = obj =>
+		private static void TryDelete(string file)
 		{
 			try
 			{
-				var req = (TRequest)obj;
-				var resp = response(req);
-				Send(responseQueue, resp);
+				File.Delete(file);
 			}
-			catch { /* ошибка в обработчике */ }
-		};
-
-		var list = _subscribers.GetOrAdd(requestQueue, _ => new List<Action<object>>());
-		lock (list)
-		{
-			list.Add(handler);
-		}
-
-		return new DisposableAction(() =>
-		{
-			lock (list)
+			catch (IOException)
 			{
-				list.Remove(handler);
+				// The file is in use or already deleted.
 			}
-		});
-	}
+		}
 
-	#endregion
-
-	#region Вспомогательные классы
-
-	private class MessageEnvelope<T>
-	{
-		public T Body { get; set; }
-		public DateTime CreatedAt { get; set; }
-		public int? TtlSeconds { get; set; }
-		public DateTime? ExpiresAt => TtlSeconds.HasValue ? CreatedAt.AddSeconds(TtlSeconds.Value) : (DateTime?)null;
-	}
-
-	private class Binding
-	{
-		public string QueueName { get; set; }
-		public string TopicPattern { get; set; }
-	}
-
-	private class DisposableAction : IDisposable
-	{
-		private Action _disposeAction;
-		public DisposableAction(Action action) => _disposeAction = action;
-		public void Dispose()
+		private sealed class MessageEnvelope<T>
 		{
-			_disposeAction?.Invoke();
-			_disposeAction = null;
+			public T Body { get; set; }
+
+			public DateTime CreatedAt { get; set; }
+
+			// The same unit as RabbitMQ TTL: milliseconds.
+			public int? TtlMilliseconds { get; set; }
+
+			public DateTime? ExpiresAt => TtlMilliseconds.HasValue
+				? CreatedAt.AddMilliseconds(TtlMilliseconds.Value)
+				: (DateTime?)null;
+		}
+
+		private sealed class Binding
+		{
+			public string QueueName { get; set; }
+
+			public string TopicPattern { get; set; }
+		}
+
+		private sealed class DisposableAction : IDisposable
+		{
+			private Action _disposeAction;
+
+			public DisposableAction(Action action)
+			{
+				_disposeAction = action;
+			}
+
+			public void Dispose()
+			{
+				_disposeAction?.Invoke();
+				_disposeAction = null;
+			}
 		}
 	}
-
-	#endregion
 }

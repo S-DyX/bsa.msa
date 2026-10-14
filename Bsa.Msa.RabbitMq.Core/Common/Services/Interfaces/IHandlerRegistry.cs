@@ -20,36 +20,22 @@ namespace Bsa.Msa.Common.Services.Interfaces
 
 	public sealed class HandlerRegistry : IHandlerRegistry
 	{
+		// Handler name -> (message type, handler type).
+		private readonly TypeNameMap<Tuple<Type, Type>> _types = new TypeNameMap<Tuple<Type, Type>>();
+
 		public HandlerRegistry()
 		{
-			types = new Dictionary<string, Tuple<Type, Type>>();
-			var type = typeof(IMessageHandler);
-
-
-			//var typesDelivered = AppDomain.CurrentDomain.GetAssemblies().SelectMany(s => s.GetTypes())
-			//	.Where(p => type.IsAssignableFrom(p));
-			var typesList = type.GetDeliveredTypes();
-
-			foreach (var tType in typesList.Where(p => type.IsAssignableFrom(p)))
+			var handlerTypes = AssemblyHelpers.GetTypes(IsHandler);
+			foreach (var handlerType in handlerTypes)
 			{
-				var interfaces = tType.GetInterfaces()
-					.Where(i => i.IsConstructedGenericType);
-				foreach (var i in interfaces)
-				{
-					var gTypes = i.GetGenericArguments();
-					foreach (var mType in gTypes)
-					{
-						types[tType.Name] = Tuple.Create(mType, tType);
-					}
-				}
+				var messageType = GetMessageType(handlerType);
+				_types.Add(handlerType, Tuple.Create(messageType, handlerType));
 			}
 		}
-		private readonly Dictionary<string, Tuple<Type, Type>> types;
+
 		public void Register<TMessage, TType>(string name) where TType : IMessageHandler<TMessage>
 		{
-			var tType = typeof(TType);
-			var mType = typeof(TMessage);
-			types[name] = Tuple.Create(mType, tType);
+			_types.Set(name, Tuple.Create(typeof(TMessage), typeof(TType)));
 		}
 
 		public void Register<TMessage, TType>() where TType : IMessageHandler<TMessage>
@@ -70,14 +56,40 @@ namespace Bsa.Msa.Common.Services.Interfaces
 
 		public Type ResolveHandler(string name)
 		{
-			if (types.ContainsKey(name))
-				return types[name].Item2;
-			return null;
+			return _types.Find(name)?.Item2;
 		}
+
 		public Type ResolveMessage(string name)
 		{
-			if (types.ContainsKey(name))
-				return types[name].Item1;
+			return _types.Find(name)?.Item1;
+		}
+
+		private static bool IsHandler(Type type)
+		{
+			return type.IsClass
+				&& !type.IsAbstract
+				&& !type.ContainsGenericParameters
+				&& GetMessageType(type) != null;
+		}
+
+		/// <summary>
+		/// The message is the first generic argument of IMessageHandler&lt;T&gt;,
+		/// IMessageHandlerAsync&lt;T&gt; or IMessageHandler&lt;T, TResponse&gt;
+		/// (before, the last argument was taken, i.e. the response type).
+		/// </summary>
+		private static Type GetMessageType(Type handlerType)
+		{
+			foreach (var i in handlerType.GetInterfaces())
+			{
+				if (!i.IsGenericType) continue;
+
+				var definition = i.GetGenericTypeDefinition();
+				if (definition == typeof(IMessageHandler<>)
+					|| definition == typeof(IMessageHandlerAsync<>)
+					|| definition == typeof(IMessageHandler<,>))
+					return i.GetGenericArguments()[0];
+			}
+
 			return null;
 		}
 	}

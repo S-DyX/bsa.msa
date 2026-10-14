@@ -146,12 +146,13 @@ namespace Bsa.Msa.Common.Repeaters
 
 		private void DrainQueue()
 		{
+			var token = _cancellationTokenSource.Token;
 			var operation = this._operationsQueue.Dequeue();
-			while (null != operation)
+			while (null != operation && !token.IsCancellationRequested)
 			{
 				try
 				{
-					operation(_cancellationTokenSource.Token);
+					operation(token);
 				}
 				catch (Exception e)
 				{

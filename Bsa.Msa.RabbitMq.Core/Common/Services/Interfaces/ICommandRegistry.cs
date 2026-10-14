@@ -16,22 +16,24 @@ namespace Bsa.Msa.Common.Services.Interfaces
 
 	public sealed class CommandRegistry : ICommandRegistry
 	{
+		private readonly TypeNameMap<Type> _types = new TypeNameMap<Type>();
+
 		public CommandRegistry()
 		{
-			types = new Dictionary<string, Type>();
-			var type = typeof(ICommand);
-
-			var typesDelivered = type.GetDeliveredTypes();
-			foreach (var tType in typesDelivered)
+			var commandType = typeof(ICommand);
+			var commandTypes = AssemblyHelpers.GetTypes(x => x.IsClass
+				&& !x.IsAbstract
+				&& !x.ContainsGenericParameters
+				&& commandType.IsAssignableFrom(x));
+			foreach (var type in commandTypes)
 			{
-				types[tType.Name] = tType;
+				_types.Add(type, type);
 			}
 		}
-		private readonly Dictionary<string, Type> types;
+
 		public void Register<TType>(string name) where TType : ICommand
 		{
-			var tType = typeof(TType);
-			types[name] = tType;
+			_types.Set(name, typeof(TType));
 		}
 
 		public void Register<TType>() where TType : ICommand
@@ -42,9 +44,7 @@ namespace Bsa.Msa.Common.Services.Interfaces
 
 		public Type Resolve(string name)
 		{
-			if (types.ContainsKey(name))
-				return types[name];
-			return null;
+			return _types.Find(name);
 		}
 
 	}

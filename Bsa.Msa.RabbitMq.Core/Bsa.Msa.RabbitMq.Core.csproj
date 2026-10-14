@@ -10,7 +10,11 @@
     <RepositoryUrl>https://github.com/S-DyX/bsa.msa</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
     <PackageTags>MSA Rabbit MQ RabbiMQ RMQ Queue Message Bsa</PackageTags>
-    <PackageReleaseNotes>Fixing service initialization</PackageReleaseNotes>
+    <PackageReleaseNotes>{ "name": "Nightly",  "type": "ReindexCommand", "schedule": "daily",   "at": "23:59" }
+{ "name": "Report",   "type": "ReportCommand",  "schedule": "weekly",  "days": "Monday;Thursday", "at": "02:00;14:00" }
+{ "name": "Billing",  "type": "BillingCommand", "schedule": "monthly", "daysOfMonth": "1;15;-1", "at": "23:59" }
+{ "name": "NightSync","type": "SyncCommand",    "period": "00:10:00", "from": "23:59", "to": "06:00", "days": "WorkingDays" }
+{ "name": "Legacy",   "type": "ExampleCommand", "period": "00:05:00", "start": "14:00:00" }</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <Version>10.0.81</Version>
     <AssemblyVersion></AssemblyVersion>

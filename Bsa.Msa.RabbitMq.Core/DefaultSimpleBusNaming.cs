@@ -36,17 +36,8 @@ namespace Bsa.Msa.RabbitMq.Core
 		/// <inheritdoc />
 		public string GetQueueName(Type type)
 		{
-			var fullName = type.FullName;
-			if (type.IsGenericType && !string.IsNullOrEmpty(fullName))
-			{
-				int index = fullName.IndexOf('`');
-				if (index > 0)
-				{
-					fullName.Remove(index);
-				}
-			}
-
-			return $"{fullName}, {type.Assembly.GetName().Name}";
+			var name = SimpleBusExtension.GetTypeName(type);
+			return $"{name}, {type.Assembly.GetName().Name}";
 		}
 
 		/// <inheritdoc />

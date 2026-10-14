@@ -38,7 +38,7 @@ dotnet build Bsa.Msa.sln
 - **Шина.** `IBusManager` / `BusManager` — основной API для отправки (`Send`), публикации (`Publish`), RPC (`Respond`), удаления и очистки очередей. `ISingleRmqBus` — обёртка над `IBusManager`. `ISimpleBus` / `SimpleBus` — работа с каналом RabbitMQ, `ISimpleConnection` / `SimpleConnection` — подключение и переподключение. Имена очередей и exchange — `ISimpleBusNaming` (`DefaultSimpleBusNaming`).
 - **Локальная шина.** `ILocalBus` / `LocalBus`: если обработчик очереди зарегистрирован в текущем процессе, сообщение доставляется ему напрямую, минуя брокер.
 - **Обработчики.** `IMessageHandler<TMessage>` (`Handle`) и `IMessageHandlerAsync<TMessage>` (`HandleAsync`). Создаются через `IMessageHandlerFactory` по имени типа из `services.json`. Подписка — `SubscriberBase<TMessage>` (`ISubscriber`), фабрика — `SubscriberFactory`.
-- **Команды.** `ICommand` (`Execute`) — задачи по расписанию. Расписание (`ICommandSchedule`, `Common/Services/Commands/Scheduling`) разбирает `CommandScheduleParser` из настроек команды в `services.json`; повторители из `Common/Repeaters` взводят одноразовый таймер `ScheduleTimer` на следующий запуск (длинные задержки — шагами по 1 мин). `isConcurrentMode: false` — запуски не пересекаются. Новая команда создаётся и освобождается на каждый запуск.
+- **Команды.** `ICommand` (`Execute`) — задачи по расписанию. Расписание (`ICommandSchedule`, `Common/Services/Commands/Scheduling`) разбирает `CommandScheduleParser` из настроек команды в `services.json`; повторители из `Common/Repeaters` взводят одноразовый таймер `ScheduleTimer` на следующий запуск (длинные задержки — шагами по 1 мин). `isConcurrentMode: false` — запуски не пересекаются. Новая команда создаётся и освобождается на каждый запуск; `CancellationToken` в конструкторе команды отменяется при остановке.
 
 ### Расписание команд (`services.json`)
 
@@ -62,7 +62,7 @@ dotnet build Bsa.Msa.sln
 { "name": "Night sync", "type": "SyncCommand", "period": "00:10:00", "from": "23:59", "to": "06:00", "days": "WorkingDays" }
 { "name": "Legacy", "type": "ExampleCommand", "period": "00:05:00", "start": "14:00:00" }
 ```
-- **Сервисы.** `ServiceUnitManager` (`IServiceUnitManager`) читает `services.json` (`IServicesSettings`): список сервисов, у каждого — `commands` и `handlers` (`subscriptionEndpoint`, `degreeOfParallelism`, `useExchange`, `retry`, `retryCount`, `ttl`, `clearAfterStart`). Запуск и остановка — `ServiceHost` (`IHostedService`) в проектах интеграции.
+- **Сервисы.** `ServiceUnitManager` (`IServiceUnitManager`) читает `services.json` (`IServicesSettings`): список сервисов, у каждого — `commands` и `handlers` (`subscriptionEndpoint`, `degreeOfParallelism`, `useExchange`, `retry`, `retryCount` — число повторов, `retryDelay` — пауза перед повтором в мс через очередь `<queue>.Retry`, `ttl`, `clearAfterStart`). Запуск и остановка — `ServiceHost` (`IHostedService`) в проектах интеграции.
 - **Настройки.** `SettingsBase` и `RabbitMqSettings` (секция `rabbitMq` в `appsettings.json`; несколько хостов через `;`).
 - Пространства имён ядра: `Bsa.Msa.RabbitMq.Core.*` и `Bsa.Msa.Common.*` (общие сервисы, обработчики, команды).
 

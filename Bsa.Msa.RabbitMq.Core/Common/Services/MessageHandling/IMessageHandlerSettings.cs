@@ -123,6 +123,13 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 		int? RetryCount { get; }
 
 		/// <summary>
+		/// Delay before a retry, in milliseconds (the <c>retryDelay</c> setting).
+		/// A failed message waits in the "&lt;queue&gt;.Retry" queue and then
+		/// returns to the queue. <c>null</c> or 0 means an immediate retry.
+		/// </summary>
+		int? RetryDelay => null;
+
+		/// <summary>
 		/// Gets the number of messages that can be prefetched from RabbitMQ.
 		/// This controls the maximum number of unacknowledged messages that can be
 		/// delivered to the consumer at once.

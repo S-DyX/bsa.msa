@@ -51,6 +51,7 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 			AppendGuid = GetAttBoolValue(raw, "appendGuid", false);
 			Uid = Guid.NewGuid().ToString();
 			RetryCount = GetAttIntValue(raw, "retryCount");
+			RetryDelay = GetAttIntValue(raw, "retryDelay");
 			SubscriptionEndpoint = GetAttValue(raw, "subscriptionEndpoint");
 			UseExchange = GetAttBoolValue(raw, "useExchange", false);
 			PrefetchCount = (ushort)GetAttIntValue(raw, "prefetchCount", 5);
@@ -90,6 +91,9 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 
 		/// <inheritdoc/>
 		public int? RetryCount { get; protected set; }
+
+		/// <inheritdoc/>
+		public int? RetryDelay { get; protected set; }
 
 		/// <inheritdoc/>
 		public ushort PrefetchCount

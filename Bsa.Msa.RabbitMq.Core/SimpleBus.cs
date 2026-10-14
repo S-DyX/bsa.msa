@@ -186,7 +186,7 @@ namespace Bsa.Msa.RabbitMq.Core
 				_simpleConnection.AfterConnect += () =>
 				{
 					if (_messageHandlerSettings.UseExchange)
-						ConfigureExchange<TMessage>(_queueName, _messageHandlerSettings);
+						TryConfigureExchange<TMessage>(_queueName, _messageHandlerSettings);
 					_logger?.Info($"AfterConnect {_queueName}");
 					if (_messageHandlerSettings.ClearAfterStart && !_isQueueCleared)
 					{
@@ -220,6 +220,20 @@ namespace Bsa.Msa.RabbitMq.Core
 			_logger?.Info($"End ConfigureExchange {queueName}");
 		}
 
+		private void TryConfigureExchange<TMessage>(string queueName, IMessageHandlerSettings settings)
+		{
+			try
+			{
+				ConfigureExchange<TMessage>(queueName, settings);
+			}
+			catch (Exception ex)
+			{
+				// The consumer setup declares the queue again and reports the error;
+				// a failure here must not break the connection setup.
+				_logger?.Error($"Can not configure exchange for {queueName}: {ex.Message}", ex);
+			}
+		}
+
 		private Action<Func<IModel>> GetExchangeConfigure<TMessage>(string queueName, IMessageHandlerSettings settings)
 		{
 			var routingKey = string.Empty;
@@ -237,7 +251,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			{
 				var exchangeName = _busNaming.GetExchangeName<TMessage>();
 				getModel().ExchangeDeclare(exchangeName, type, true);
-				getModel().QueueDeclare(queueName, true, false, _messageHandlerSettings.AutoDelete, dictionary);
+				getModel().QueueDeclare(queueName, true, false, _messageHandlerSettings?.AutoDelete ?? false, dictionary);
 				getModel().QueueBind(queueName, exchangeName, routingKey ?? String.Empty);
 				getModel().BasicQos(0, _messageHandlerSettings?.PrefetchCount ?? 5, false);
 
@@ -367,11 +381,14 @@ namespace Bsa.Msa.RabbitMq.Core
 			}
 		}
 
-		private static string _retrycount = "retryCount";
+		private const string RetryCountHeader = "retryCount";
+
+		private const string RetryQueueSuffix = ".Retry";
+
 		private byte[] ProcessMessageInternalBus<TMessage>(string queueName, Action<TMessage> action, Func<IModel> getChannel, InternalBusItem item, TMessage message)
 		{
 			byte[] messageArray = null;
-			IDictionary<string, object> headers = item.Headers;
+			IDictionary<string, object> headers = item.Headers ?? new Dictionary<string, object>();
 			try
 			{
 				if (message == null)
@@ -389,36 +406,8 @@ namespace Bsa.Msa.RabbitMq.Core
 			{
 				_logger?.Error($"messageId:{item.Id};Error queueName={queueName}: {exception.Message}", exception);
 				messageArray = Encoding.UTF8.GetBytes(item.Body);
-				if (_messageHandlerSettings.Retry)
-				{
-					var retryCount = 0;
-
-					if (headers.ContainsKey(_retrycount))
-					{
-						var header = headers[_retrycount];
-						retryCount = int.Parse(header?.ToString());
-					}
-
-					if (_messageHandlerSettings.RetryCount.HasValue &&
-						_messageHandlerSettings.RetryCount.Value < retryCount)
-					{
-						_logger?.Error(
-							$"retry count exceeded {retryCount}>{_messageHandlerSettings.RetryCount.Value}. Error queueName={queueName}: {exception.Message}",
-							exception);
-						SendErrorMessage(getChannel, queueName, messageArray, exception);
-					}
-					else
-					{
-						retryCount++;
-						headers[_retrycount] = retryCount;
-						Send(getChannel, queueName, messageArray, headers);
-					}
-				}
-				else
-				{
-					//Send(getChannel, queueName, messageArray, headers);
+				if (!TryRetry(getChannel, queueName, messageArray, headers, exception))
 					SendErrorMessage(getChannel, queueName, messageArray, exception);
-				}
 				_internalBus.Ack(item.Id);
 			}
 
@@ -633,32 +622,104 @@ namespace Bsa.Msa.RabbitMq.Core
 					ex);
 			}
 
-			if (_messageHandlerSettings.Retry)
-			{
-				var retryCount = 0;
-				if (headers.ContainsKey(_retrycount))
-				{
-					var header = headers[_retrycount];
-					retryCount = int.Parse(header?.ToString());
-				}
-
-				if (_messageHandlerSettings.RetryCount.HasValue && _messageHandlerSettings.RetryCount.Value < retryCount)
-				{
-					_logger?.Error(
-						$"retry count exceeded {retryCount}>{_messageHandlerSettings.RetryCount.Value}. Error queueName={queueName}: {ex.Message}",
-						ex);
-					ActionOnModel(getChannel, channel => SendErrorMessage(channel, queueName, messageAsString, ex));
-				}
-				else
-				{
-					retryCount++;
-					headers["retryCount"] = retryCount;
-					ActionOnModel(getChannel, channel => Send(channel, queueName, messageAsString, headers));
-				}
-			}
-			else
-			{
+			var body = Encoding.UTF8.GetBytes(messageAsString);
+			if (!TryRetry(getChannel, queueName, body, headers, ex))
 				ActionOnModel(getChannel, channel => SendErrorMessage(channel, queueName, messageAsString, ex));
+		}
+
+		/// <summary>
+		/// Republishes a failed message if retries are enabled and not exhausted.
+		/// "retryCount" is the number of retries already made: with
+		/// RetryCount = 2 the message is retried twice, then goes to ".Error".
+		/// </summary>
+		private bool TryRetry(
+			Func<IModel> getChannel,
+			string queueName,
+			byte[] body,
+			IDictionary<string, object> headers,
+			Exception exception)
+		{
+			if (!_messageHandlerSettings.Retry) return false;
+
+			var retryCount = GetRetryCount(headers);
+			var maxCount = _messageHandlerSettings.RetryCount;
+			if (maxCount.HasValue && retryCount >= maxCount.Value)
+			{
+				_logger?.Error(
+					$"retry count exceeded {retryCount}>={maxCount.Value}. Error queueName={queueName}: {exception.Message}",
+					exception);
+				return false;
+			}
+
+			headers[RetryCountHeader] = retryCount + 1;
+			var delay = _messageHandlerSettings.RetryDelay;
+			if (delay.HasValue && delay.Value > 0)
+				SendDelayed(getChannel, queueName, body, headers, delay.Value);
+			else
+				Send(getChannel, queueName, body, headers);
+			return true;
+		}
+
+		private static int GetRetryCount(IDictionary<string, object> headers)
+		{
+			if (headers == null || !headers.TryGetValue(RetryCountHeader, out var value))
+				return 0;
+
+			// Other clients send strings as byte[]; after a restart values may be JsonElement.
+			switch (value)
+			{
+				case int intValue:
+					return intValue;
+				case long longValue:
+					return (int)longValue;
+				case byte[] bytes:
+					return ParseRetryCount(Encoding.UTF8.GetString(bytes));
+				case JsonElement element when element.ValueKind == JsonValueKind.Number:
+					return element.TryGetInt32(out var number) ? number : 0;
+				default:
+					return ParseRetryCount(value?.ToString());
+			}
+		}
+
+		private static int ParseRetryCount(string value)
+		{
+			return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var count)
+				? count
+				: 0;
+		}
+
+		/// <summary>
+		/// Puts the message into "&lt;queue&gt;.Retry" with a per-message TTL;
+		/// when it expires the broker dead-letters it back to the queue.
+		/// </summary>
+		private void SendDelayed(
+			Func<IModel> getChannel,
+			string queueName,
+			byte[] body,
+			IDictionary<string, object> headers,
+			int delay)
+		{
+			var retryQueue = queueName + RetryQueueSuffix;
+			try
+			{
+				ActionOnModel(getChannel, model =>
+				{
+					var arguments = new Dictionary<string, object>
+					{
+						["x-dead-letter-exchange"] = string.Empty,
+						["x-dead-letter-routing-key"] = queueName
+					};
+					model.QueueDeclare(retryQueue, true, false, false, arguments);
+					var props = model.CreateBasicProperties();
+					props.DeliveryMode = 2;
+					props.Headers = headers;
+					props.Expiration = delay.ToString(CultureInfo.InvariantCulture);
+					model.BasicPublish(string.Empty, retryQueue, props, body);
+				});
+			}
+			catch (Exception ex)
+			{
+				_logger?.Error($"Can not send message to {retryQueue}: {ex.Message}", ex);
 			}
 		}
 
@@ -928,6 +989,12 @@ namespace Bsa.Msa.RabbitMq.Core
 		/// <inheritdoc />
 		public void Publish<TMessage>(TMessage message, string routingKey, string exchangeName = null) where TMessage : class
 		{
+			Publish(message, routingKey, exchangeName, null);
+		}
+
+		/// <inheritdoc />
+		public void Publish<TMessage>(TMessage message, string routingKey, string exchangeName, int? ttl) where TMessage : class
+		{
 			var type = fanout;
 			if (!string.IsNullOrEmpty(routingKey))
 				type = topic;
@@ -944,6 +1011,8 @@ namespace Bsa.Msa.RabbitMq.Core
 			{
 				var props = getChannel().CreateBasicProperties();
 				props.DeliveryMode = 2;
+				if (ttl.HasValue)
+					props.Expiration = ttl.Value.ToString(CultureInfo.InvariantCulture);
 				getChannel().BasicPublish(exchangeName, routingKey ?? String.Empty, props, body);
 			});
 		}
@@ -1029,19 +1098,62 @@ namespace Bsa.Msa.RabbitMq.Core
 			where TRequest : class
 			where TResponse : class
 		{
-			throw new NotImplementedException();
-			var queue = queueName ?? GetQueue<TRequest>();
-			TResponse resp = null;
-			Consume<TRequest>(queue,
-				(request) =>
-				{
-					resp = response.Invoke(request);
-					//DeliverMessage(resp, e);
-				},
-				GetExchangeConfigure<TRequest>(queue, null)
-			);
+			ArgumentNullException.ThrowIfNull(response);
 
-			return null;
+			var queue = queueName ?? GetQueue<TRequest>();
+			string consumerTag = null;
+			_simpleConnection.Execute(getChannel =>
+			{
+				GetRespondeConfigure(queue).Invoke(getChannel);
+				var channel = getChannel();
+				var consumer = new EventingBasicConsumer(channel);
+				consumer.Received += (ch, e) => HandleRequest(response, channel, e);
+				consumerTag = channel.BasicConsume(queue, false, consumer);
+			});
+			_logger?.Info($"Respond {queue}");
+
+			return new Subscription(() => CancelConsumer(consumerTag));
+		}
+
+		private void HandleRequest<TRequest, TResponse>(
+			Func<TRequest, TResponse> response,
+			IModel deliveryModel,
+			BasicDeliverEventArgs e)
+			where TResponse : class
+		{
+			Func<IModel> getChannel = () => _simpleConnection.CreateModel(null);
+			try
+			{
+				var json = Encoding.UTF8.GetString(e.Body.ToArray());
+				var request = _serializeService.Deserialize<TRequest>(json);
+				var result = response.Invoke(request);
+				if (string.IsNullOrEmpty(e.BasicProperties?.ReplyTo))
+					_logger?.Warn("Request without ReplyTo, the response is dropped");
+				else
+					DeliverMessage(result, e);
+			}
+			catch (Exception ex)
+			{
+				_logger?.Error($"Respond error: {ex.Message}", ex);
+			}
+			finally
+			{
+				TryAck(getChannel, deliveryModel, e.DeliveryTag);
+			}
+		}
+
+		private void CancelConsumer(string consumerTag)
+		{
+			if (string.IsNullOrEmpty(consumerTag)) return;
+
+			try
+			{
+				_simpleConnection.Execute(getChannel => getChannel().BasicCancel(consumerTag));
+			}
+			catch (Exception ex)
+			{
+				_logger?.Warn($"Can not cancel consumer {consumerTag}: {ex.Message}");
+			}
 		}
 
 		/// <inheritdoc />
@@ -1068,8 +1180,22 @@ namespace Bsa.Msa.RabbitMq.Core
 				var res = _serializeService.Serialize(resp);
 				var b = Encoding.UTF8.GetBytes(res);
 				getChannel().BasicPublish("", props.ReplyTo, replyProps, b);
-				//getChannel().BasicAck(ea.DeliveryTag, false);
 			});
+		}
+
+		private sealed class Subscription : IDisposable
+		{
+			private Action _dispose;
+
+			public Subscription(Action dispose)
+			{
+				_dispose = dispose;
+			}
+
+			public void Dispose()
+			{
+				Interlocked.Exchange(ref _dispose, null)?.Invoke();
+			}
 		}
 	}
 }

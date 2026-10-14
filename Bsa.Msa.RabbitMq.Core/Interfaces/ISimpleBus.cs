@@ -78,6 +78,19 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		void Publish<TMessage>(TMessage message, string topic, string exchangeName = null) where TMessage : class;
 
 		/// <summary>
+		/// Publishes a message with a per-message TTL.
+		/// </summary>
+		/// <typeparam name="TMessage">Message type.</typeparam>
+		/// <param name="message">Message.</param>
+		/// <param name="topic">Routing key; empty for a fanout exchange.</param>
+		/// <param name="exchangeName">Exchange; <c>null</c> means the exchange of the type.</param>
+		/// <param name="ttl">Message TTL in milliseconds; <c>null</c> means no TTL.</param>
+		void Publish<TMessage>(TMessage message, string topic, string exchangeName, int? ttl) where TMessage : class
+		{
+			Publish(message, topic, exchangeName);
+		}
+
+		/// <summary>
 		/// Delete queue
 		/// </summary>
 		/// <typeparam name="TMessage"></typeparam>

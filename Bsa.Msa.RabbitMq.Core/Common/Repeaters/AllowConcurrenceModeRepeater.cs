@@ -87,6 +87,8 @@ namespace Bsa.Msa.Common.Repeaters
 
 		private void HandleTimerCallback()
 		{
+			if (_cancellationTokenSource.IsCancellationRequested) return;
+
 			try
 			{
 				_repeatAction(_cancellationTokenSource.Token);

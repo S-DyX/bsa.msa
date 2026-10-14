@@ -25,7 +25,7 @@ namespace Bsa.Msa.Common.Repeaters
 
 		private DateTime? _nextRun;
 
-		private bool _isDisposed;
+		private volatile bool _isDisposed;
 
 		private static readonly TimeSpan MaxStep = TimeSpan.FromMinutes(1);
 
@@ -141,6 +141,9 @@ namespace Bsa.Msa.Common.Repeaters
 			var now = DateTime.Now;
 			var last = now > dueTime ? now : dueTime;
 			ScheduleNext(last.AddTicks(1));
+
+			// Dispose may have happened while the next run was planned.
+			if (_isDisposed) return;
 
 			_onDue();
 		}
