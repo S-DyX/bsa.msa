@@ -50,12 +50,6 @@ namespace Bsa.Msa.Common.Repeaters
 
 				cancellationToken =>
 				{
-					if (!RepeaterSchedule.IsAllowedToday(_settings.DaysOfWeek))
-					{
-						_logger?.Debug($"Skip command: {_settings.Name}, not allowed today");
-						return;
-					}
-
 					var settings = (ISettings)_settings;
 					var command = _commandFactory.Create(_settings.Type, settings, cancellationToken);
 					_command = command;

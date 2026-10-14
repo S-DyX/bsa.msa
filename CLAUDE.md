@@ -38,7 +38,30 @@ dotnet build Bsa.Msa.sln
 - **Шина.** `IBusManager` / `BusManager` — основной API для отправки (`Send`), публикации (`Publish`), RPC (`Respond`), удаления и очистки очередей. `ISingleRmqBus` — обёртка над `IBusManager`. `ISimpleBus` / `SimpleBus` — работа с каналом RabbitMQ, `ISimpleConnection` / `SimpleConnection` — подключение и переподключение. Имена очередей и exchange — `ISimpleBusNaming` (`DefaultSimpleBusNaming`).
 - **Локальная шина.** `ILocalBus` / `LocalBus`: если обработчик очереди зарегистрирован в текущем процессе, сообщение доставляется ему напрямую, минуя брокер.
 - **Обработчики.** `IMessageHandler<TMessage>` (`Handle`) и `IMessageHandlerAsync<TMessage>` (`HandleAsync`). Создаются через `IMessageHandlerFactory` по имени типа из `services.json`. Подписка — `SubscriberBase<TMessage>` (`ISubscriber`), фабрика — `SubscriberFactory`.
-- **Команды.** `ICommand` (`Execute`) — периодические задачи; запускаются повторителями из `Common/Repeaters` по `period` / `start` из `services.json`.
+- **Команды.** `ICommand` (`Execute`) — задачи по расписанию. Расписание (`ICommandSchedule`, `Common/Services/Commands/Scheduling`) разбирает `CommandScheduleParser` из настроек команды в `services.json`; повторители из `Common/Repeaters` взводят одноразовый таймер `ScheduleTimer` на следующий запуск (длинные задержки — шагами по 1 мин). `isConcurrentMode: false` — запуски не пересекаются. Новая команда создаётся и освобождается на каждый запуск.
+
+### Расписание команд (`services.json`)
+
+| Ключ | Значение |
+|---|---|
+| `schedule` | `interval` (по умолчанию), `daily`, `weekly`, `monthly` |
+| `period` | интервал для `interval`, `hh:mm:ss` или `d.hh:mm:ss` |
+| `start` | для `interval` без окна — время суток первого запуска (пусто — сразу); для остальных — синоним `at` |
+| `from` / `to` | окно `interval` по времени суток; `to` ≤ `from` — окно через полночь, без `to` — 24 ч |
+| `at` | время запуска для `daily`/`weekly`/`monthly`, несколько через `;` |
+| `days` | дни недели: `Monday, Friday`, `WorkingDays`, `Weekends`; для окна — день начала окна; для `weekly` обязателен |
+| `daysOfMonth` | для `monthly`: `1;15;-1` (`-1` — последний день; дня нет в месяце — пропуск) |
+| `startDate` / `endDate` | границы действия расписания (локальное время) |
+
+Время — локальное. Пропущенные во время сна запуски сливаются в один.
+
+```json
+{ "name": "Nightly", "type": "ReindexCommand", "schedule": "daily", "at": "23:59" }
+{ "name": "Report", "type": "ReportCommand", "schedule": "weekly", "days": "Monday;Thursday", "at": "02:00;14:00" }
+{ "name": "Billing", "type": "BillingCommand", "schedule": "monthly", "daysOfMonth": "1;-1", "at": "23:59" }
+{ "name": "Night sync", "type": "SyncCommand", "period": "00:10:00", "from": "23:59", "to": "06:00", "days": "WorkingDays" }
+{ "name": "Legacy", "type": "ExampleCommand", "period": "00:05:00", "start": "14:00:00" }
+```
 - **Сервисы.** `ServiceUnitManager` (`IServiceUnitManager`) читает `services.json` (`IServicesSettings`): список сервисов, у каждого — `commands` и `handlers` (`subscriptionEndpoint`, `degreeOfParallelism`, `useExchange`, `retry`, `retryCount`, `ttl`, `clearAfterStart`). Запуск и остановка — `ServiceHost` (`IHostedService`) в проектах интеграции.
 - **Настройки.** `SettingsBase` и `RabbitMqSettings` (секция `rabbitMq` в `appsettings.json`; несколько хостов через `;`).
 - Пространства имён ядра: `Bsa.Msa.RabbitMq.Core.*` и `Bsa.Msa.Common.*` (общие сервисы, обработчики, команды).

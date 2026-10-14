@@ -61,16 +61,14 @@ namespace Bsa.Msa.Common.Repeaters
 
 		private const int MaxQueueLength = 1;
 
-		private readonly TimeSpan _dueTime;
-
-		private readonly TimeSpan _period;
+		private readonly ICommandSettings _commandSettings;
 
 		private OperationsQueue _operationsQueue;
 
 		// 1 while a thread drains the queue; changed only through Interlocked.
 		private int _isProcessing;
 
-		private Timer _timer;
+		private ScheduleTimer _timer;
 
 		private string _name;
 
@@ -79,8 +77,7 @@ namespace Bsa.Msa.Common.Repeaters
 		public DisallowConcurrentModeRepeater(ICommandSettings commandSettings, ILocalLogger logger = null)
 		{
 			_logger = logger;
-			this._dueTime = commandSettings.DueTime;
-			this._period = commandSettings.Period;
+			_commandSettings = commandSettings;
 			_name = commandSettings.Name;
 			this._cancellationTokenSource = new CancellationTokenSource();
 		}
@@ -110,13 +107,16 @@ namespace Bsa.Msa.Common.Repeaters
 		{
 			if (null == this._timer)
 			{
-				// "start" is a time of day, the same as in AllowConcurrenceModeRepeater.
-				var startDelay = RepeaterSchedule.GetStartDelay(_dueTime);
-				this._timer = new Timer(HandleTimerCallback, null, startDelay, _period);
+				this._timer = new ScheduleTimer(
+					_commandSettings.Schedule,
+					HandleTimerCallback,
+					_logger,
+					_name);
+				this._timer.Start();
 			}
 		}
 
-		private void HandleTimerCallback(object state)
+		private void HandleTimerCallback()
 		{
 			try
 			{

@@ -1,7 +1,9 @@
-﻿using Bsa.Msa.Common.Repeaters;
+﻿using System;
+using System.Globalization;
+using Bsa.Msa.Common.Repeaters;
+using Bsa.Msa.Common.Services.Commands.Scheduling;
 using Bsa.Msa.Common.Settings;
 using Microsoft.Extensions.Configuration;
-using System;
 
 namespace Bsa.Msa.Common.Services.Commands
 {
@@ -31,6 +33,16 @@ namespace Bsa.Msa.Common.Services.Commands
 		/// <see cref="DaysOfWeek"/>
 		/// </summary>
 		DaysOfWeek? DaysOfWeek { get; }
+
+		/// <summary>
+		/// Schedule of the command runs. By default it is built
+		/// from <see cref="Period"/>, <see cref="DueTime"/>
+		/// and <see cref="DaysOfWeek"/>.
+		/// </summary>
+		ICommandSchedule Schedule => new IntervalSchedule(
+			Period,
+			DueTime,
+			days: DaysOfWeek);
 	}
 	[Flags]
 	public enum DaysOfWeek
@@ -110,6 +122,9 @@ namespace Bsa.Msa.Common.Services.Commands
 		/// </summary>
 		public RepeaterConcurrentMode Mode { get; protected set; }
 
+		/// <inheritdoc/>
+		public ICommandSchedule Schedule { get; protected set; }
+
 		public CommandSettings(string name, IConfigurationSection raw)
 			: base(raw)
 		{
@@ -120,22 +135,22 @@ namespace Bsa.Msa.Common.Services.Commands
 		{
 			Name = GetAttValue(raw, "name");
 			Type = GetAttValue(raw, "type");
+			// "period" is required only by the interval schedule.
 			var periodStr = GetAttValue(raw, "period");
+			if (!string.IsNullOrEmpty(periodStr))
+				Period = TimeSpan.Parse(periodStr, CultureInfo.InvariantCulture);
 
-			Period = TimeSpan.Parse(periodStr);
 			var startStr = GetAttValue(raw, "start");
 			if (!string.IsNullOrEmpty(startStr))
-			{
-				DueTime = TimeSpan.Parse(startStr);
-			}
-			var daysStr = GetAttValue(raw, "days");
-			if (!string.IsNullOrEmpty(daysStr))
-			{
-				DaysOfWeek = Enum.Parse<DaysOfWeek>(daysStr);
-			}
+				DueTime = TimeSpan.Parse(startStr, CultureInfo.InvariantCulture);
+
+			DaysOfWeek = CommandScheduleParser.ParseDays(GetAttValue(raw, "days"));
 
 			Mode = GetAttBoolValue(raw, "isConcurrentMode", true) ? RepeaterConcurrentMode.AllowConcurrenceMode : RepeaterConcurrentMode.DisallowConcurrentMode;
 
+			Schedule = CommandScheduleParser.Parse(
+				key => GetAttValue(raw, key),
+				Name);
 		}
 	}
 }

@@ -1,7 +1,6 @@
-﻿using Bsa.Msa.Common.Services.Commands;
-using System;
+﻿using System;
 using System.Threading;
-using System.Xml.Linq;
+using Bsa.Msa.Common.Services.Commands;
 
 namespace Bsa.Msa.Common.Repeaters
 {
@@ -19,47 +18,56 @@ namespace Bsa.Msa.Common.Repeaters
 	public delegate void OnRepeat(CancellationToken cancellationToken);
 
 	/// <summary>
-	/// Represents the repeater.
+	/// Runs the action by the command schedule; a new run may start
+	/// while the previous one is still running.
 	/// </summary>
 	public sealed class AllowConcurrenceModeRepeater : IRepeater
 	{
 		private readonly ICommandSettings _commandSettings;
-		private readonly ILocalLogger _logger;
-		private readonly TimeSpan _dueTime;
 
-		private readonly TimeSpan _period;
+		private readonly ILocalLogger _logger;
 
 		private readonly CancellationTokenSource _cancellationTokenSource;
 
-		private Timer _timer;
+		private readonly string _name;
 
-		private bool _isStarted = false;
-		private string _name;
+		private ScheduleTimer _timer;
+
+		private bool _isStarted;
+
 		private Action<CancellationToken> _repeatAction;
-		public AllowConcurrenceModeRepeater(ICommandSettings commandSettings, ILocalLogger logger = null)
+
+		/// <summary>
+		/// Creates the repeater.
+		/// </summary>
+		/// <param name="commandSettings">Command settings with the schedule.</param>
+		/// <param name="logger">Logger.</param>
+		public AllowConcurrenceModeRepeater(
+			ICommandSettings commandSettings,
+			ILocalLogger logger = null)
 		{
 			_commandSettings = commandSettings;
 			_logger = logger;
-			this._dueTime = commandSettings.DueTime;
-			this._period = commandSettings.Period;
 			_name = commandSettings.Name;
-			this._cancellationTokenSource = new CancellationTokenSource();
+			_cancellationTokenSource = new CancellationTokenSource();
 		}
 
+		/// <inheritdoc/>
 		public void Start(Action<CancellationToken> onRepeat)
 		{
 			if (onRepeat == null)
-				throw new ArgumentNullException("onRepeat");
+				throw new ArgumentNullException(nameof(onRepeat));
 
 			if (_isStarted)
 				throw new InvalidOperationException("The repeater is already started.");
 
-			this._repeatAction = onRepeat;
-			var startDelay = RepeaterSchedule.GetStartDelay(_dueTime);
-
-
-			_timer = new Timer(HandleTimerCallback, null, startDelay, _period);
-
+			_repeatAction = onRepeat;
+			_timer = new ScheduleTimer(
+				_commandSettings.Schedule,
+				HandleTimerCallback,
+				_logger,
+				_name);
+			_timer.Start();
 			_isStarted = true;
 		}
 
@@ -69,17 +77,15 @@ namespace Bsa.Msa.Common.Repeaters
 		public event UnhandledExceptionEventHandler Error;
 
 		/// <summary>
-		/// Disposes the _timer.
+		/// Stops the timer and cancels the running actions.
 		/// </summary>
 		public void Dispose()
 		{
 			_cancellationTokenSource.Cancel();
-
-			if (_timer != null)
-				_timer.Dispose();
+			_timer?.Dispose();
 		}
 
-		private void HandleTimerCallback(object state)
+		private void HandleTimerCallback()
 		{
 			try
 			{
@@ -88,9 +94,7 @@ namespace Bsa.Msa.Common.Repeaters
 			catch (Exception e)
 			{
 				_logger?.Error($"Name:{_name};Message:{e.Message}", e);
-
-				if (Error != null)
-					Error(this, new UnhandledExceptionEventArgs(e, false));
+				Error?.Invoke(this, new UnhandledExceptionEventArgs(e, false));
 			}
 		}
 	}
