@@ -53,6 +53,12 @@ dotnet test Bsa.Msa.RabbitMq.Core.Tests/Bsa.Msa.RabbitMq.Core.Tests.csproj
 - `IServiceUnitController` (реализует `ServiceUnitManager`): `GetUnits`, `Add/Start/Stop/RemoveHandler`, `Add/Start/Stop/RemoveCommand`, `Reload`. Получить: `(IServiceUnitController)container.Resolve<IServiceUnitManager>()` или зарегистрировать тот же singleton как `IServiceUnitController`.
 - При `Changed`/`Reload`: новые запускаются, удалённые останавливаются, изменённые (по значениям настроек) перезапускаются. Остановленные через контроллер остаются остановленными. Добавленные через контроллер источник не удаляет. Остановленный обработчик снимается и с локальной шины (`ILocalBus.Unregister`).
 
+### Мониторинг очередей (`Monitoring/`)
+
+- `IQueueMonitor.GetQueuesAsync(QueueQuery)` — очереди с числом сообщений; `QueueQuery`: `SortBy` (`Messages` по умолчанию, `MessagesReady`, `MessagesUnacknowledged`, `Consumers`, `PublishRate`, `DeliverRate`, `Name`), `Descending` (по умолчанию — самые большие сверху), `NameContains`, `MinMessages`, `Top`. Сортировка на клиенте (`QueueQueryExtensions.Apply`), при равенстве — по имени.
+- `ManagementApiQueueMonitor` — все очереди брокера через HTTP API плагина `rabbitmq_management` (порт 15672, `GET /api/queues/{vhost}?columns=...`): ready, unacked, потребители, состояние, скорости. Пользователю нужен тег `monitoring`.
+- `AmqpQueueMonitor` — без плагина, по списку имён (`QueueDeclarePassive`), на отдельном соединении; только ready и потребители, несуществующие очереди пропускаются. Имена обработчиков: `ServiceUnitState.SubscriptionEndpoint`, с `.Error`/`.Retry` — `AmqpQueueMonitor.WithServiceQueues`.
+
 ### Расписание команд (`services.json`)
 
 | Ключ | Значение |

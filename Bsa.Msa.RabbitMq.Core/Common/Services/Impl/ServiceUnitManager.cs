@@ -571,7 +571,8 @@ namespace Bsa.Msa.Common.Services.Impl
 		private static ServiceUnitState ToState(string name, ServiceUnitKind kind, UnitEntry entry)
 		{
 			var unit = entry.Unit;
-			return new ServiceUnitState(name, kind, unit != null, unit?.IsStarted ?? false);
+			var endpoint = (entry.Settings as IMessageHandlerSettings)?.SubscriptionEndpoint;
+			return new ServiceUnitState(name, kind, unit != null, unit?.IsStarted ?? false, endpoint);
 		}
 
 		private static void IncreaseThreadPool()

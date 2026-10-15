@@ -12,13 +12,25 @@
 		/// <param name="kind">Unit kind.</param>
 		/// <param name="isEnabled">Whether the unit should run.</param>
 		/// <param name="isStarted">Whether the unit is running now.</param>
-		public ServiceUnitState(string name, ServiceUnitKind kind, bool isEnabled, bool isStarted)
+		/// <param name="subscriptionEndpoint">Queue of a handler; <c>null</c> for a command.</param>
+		public ServiceUnitState(
+			string name,
+			ServiceUnitKind kind,
+			bool isEnabled,
+			bool isStarted,
+			string subscriptionEndpoint = null)
 		{
 			Name = name;
 			Kind = kind;
 			IsEnabled = isEnabled;
 			IsStarted = isStarted;
+			SubscriptionEndpoint = subscriptionEndpoint;
 		}
+
+		/// <summary>
+		/// Queue of a handler, e.g. for <c>AmqpQueueMonitor</c>; <c>null</c> for a command.
+		/// </summary>
+		public string SubscriptionEndpoint { get; }
 
 		/// <summary>
 		/// Unit name.

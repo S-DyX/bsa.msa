@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Platforms>AnyCPU;x64</Platforms>
     <Description>Micro service architecture using the rabbitmq message broker.</Description>
     <Copyright>Stanislav Batyrgareev</Copyright>
@@ -16,7 +16,7 @@
 { "name": "NightSync","type": "SyncCommand",    "period": "00:10:00", "from": "23:59", "to": "06:00", "days": "WorkingDays" }
 { "name": "Legacy",   "type": "ExampleCommand", "period": "00:05:00", "start": "14:00:00" }</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>6.0.82</Version>
+    <Version>6.0.83</Version>
     <AssemblyVersion></AssemblyVersion>
     <FileVersion></FileVersion>
     <Authors>Stanislav Batyrgareev</Authors>
