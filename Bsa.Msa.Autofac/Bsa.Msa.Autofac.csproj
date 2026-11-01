@@ -21,19 +21,32 @@ now you can set ttl 10000 ms</PackageReleaseNotes>
     <UserSecretsId>296ee702-81ce-4c22-9442-6b72b65466bd</UserSecretsId>
   </PropertyGroup>
 
-  <!-- The core: by default the project of this repository (dotnet pack turns the reference into
-       a dependency on the package of the same version); -p:UseCorePackage=true uses the published package. -->
+  <!-- The core as a package of the line of the platform: net6.0 -> 6.0.x, ..., net10.0 -> 10.0.x.
+       -p:UseCoreProject=true uses the project of this repository instead (local development). -->
   <PropertyGroup>
-    <UseCorePackage Condition="'$(UseCorePackage)' == ''">false</UseCorePackage>
-    <CorePackageVersion>10.0.84</CorePackageVersion>
+    <CorePackagePatch Condition="'$(CorePackagePatch)' == ''">84</CorePackagePatch>
+    <UseCoreProject Condition="'$(UseCoreProject)' == ''">false</UseCoreProject>
   </PropertyGroup>
-  <ItemGroup Condition="'$(UseCorePackage)' != 'true'">
+  <ItemGroup Condition="'$(UseCoreProject)' == 'true'">
     <ProjectReference Include="..\Bsa.Msa.RabbitMq.Core\Bsa.Msa.RabbitMq.Core.csproj" />
   </ItemGroup>
-  <ItemGroup Condition="'$(UseCorePackage)' == 'true'">
-    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="$(CorePackageVersion)" />
+  <ItemGroup Condition="'$(UseCoreProject)' != 'true' And '$(TargetFramework)' == 'net6.0'">
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="6.0.$(CorePackagePatch)" />
   </ItemGroup>
-  <!-- Microsoft.Extensions.* per platform: the 9.x and 10.x packages do not support net6/net7 -->
+  <ItemGroup Condition="'$(UseCoreProject)' != 'true' And '$(TargetFramework)' == 'net7.0'">
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="7.0.$(CorePackagePatch)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseCoreProject)' != 'true' And '$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="8.0.$(CorePackagePatch)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseCoreProject)' != 'true' And '$(TargetFramework)' == 'net9.0'">
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="9.0.$(CorePackagePatch)" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(UseCoreProject)' != 'true' And '$(TargetFramework)' == 'net10.0'">
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="10.0.$(CorePackagePatch)" />
+  </ItemGroup>
+  <!-- Per platform: the newest package whose dependencies stay within the line of the platform
+       (Autofac.Extensions.DependencyInjection 11.x needs Microsoft.Extensions 10.x, 9.x/10.x need 8.x) -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
@@ -43,16 +56,16 @@ now you can set ttl 10000 ms</PackageReleaseNotes>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="10.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.22" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
     <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="11.0.2" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.13" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.14" />
   </ItemGroup>
 
 </Project>

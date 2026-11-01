@@ -51,7 +51,8 @@ http://bsasearch.org/msa.html</Description>
   <ItemGroup Condition="'$(UseCorePackage)' == 'true'">
     <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="$(CorePackageVersion)" />
   </ItemGroup>
-  <!-- Microsoft.Extensions.* per platform: the 9.x and 10.x packages do not support net6/net7 -->
+  <!-- Per platform: the newest package whose dependencies stay within the line of the platform
+       (Autofac.Extensions.DependencyInjection 11.x needs Microsoft.Extensions 10.x, 9.x/10.x need 8.x) -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
   </ItemGroup>
@@ -62,10 +63,10 @@ http://bsasearch.org/msa.html</Description>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net9.0'">
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.3" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.22" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.14" />
   </ItemGroup>
 
 </Project>
