@@ -134,9 +134,13 @@ namespace RabbitMQ.Client.Impl
 
 			private bool IsReady()
 			{
-
-				var isReady = _channel.Reader.WaitToReadAsync().Result;
-				return isReady;
+				// A ValueTask from a channel must not be blocked on with .Result before it completes:
+				// on an empty channel it throws, and the catch in Loop slept 200 ms or more
+				// before every next batch of deliveries.
+				var wait = _channel.Reader.WaitToReadAsync();
+				return wait.IsCompletedSuccessfully
+					? wait.Result
+					: wait.AsTask().GetAwaiter().GetResult();
 			}
 
 			async Task LoopWithConcurrency(CancellationToken cancellationToken)
