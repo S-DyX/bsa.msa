@@ -371,7 +371,7 @@ namespace Bsa.Msa.RabbitMq.Core
 							}
 						};
 
-						_queue.Enqueue(a);
+						EnqueueWork(a);
 					});
 				}
 			}
@@ -416,6 +416,15 @@ namespace Bsa.Msa.RabbitMq.Core
 		private readonly object _syncTask = new object();
 		private readonly List<AsyncWorker> _asyncWorkers = new List<AsyncWorker>(5);
 		private readonly ConcurrentQueue<Action> _queue = new ConcurrentQueue<Action>();
+
+		// Released once per queued action, wakes an idle worker immediately.
+		private readonly SemaphoreSlim _workSignal = new SemaphoreSlim(0);
+
+		private void EnqueueWork(Action action)
+		{
+			_queue.Enqueue(action);
+			_workSignal.Release();
+		}
 
 		private void ActionOnModel(Func<IModel> channel, Action<IModel> action)
 		{
@@ -521,7 +530,7 @@ namespace Bsa.Msa.RabbitMq.Core
 					return false;
 				}
 
-				_queue.Enqueue(() =>
+				EnqueueWork(() =>
 				{
 					Increment();
 					try
@@ -593,7 +602,7 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			lock (_syncTask)
 			{
-				_asyncWorkers.Add(new AsyncWorker(_logger, _queue, RemoveAWoker, _queueName));
+				_asyncWorkers.Add(new AsyncWorker(_logger, _queue, RemoveAWoker, _queueName, _workSignal));
 			}
 		}
 
