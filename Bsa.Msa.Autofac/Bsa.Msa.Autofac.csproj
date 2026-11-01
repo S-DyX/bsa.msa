@@ -22,28 +22,30 @@ now you can set ttl 10000 ms</PackageReleaseNotes>
   </PropertyGroup>
 
   <!-- The core as a package of the line of the platform: net6.0 -> 6.0.x, ..., net10.0 -> 10.0.x.
+       The exact version [x]: a missing package fails the restore (NU1102) instead of taking the nearest
+       higher version, which may belong to another line and have no assembly for the platform.
        -p:UseCoreProject=true uses the project of this repository instead (local development). -->
   <PropertyGroup>
-    <CorePackagePatch Condition="'$(CorePackagePatch)' == ''">84</CorePackagePatch>
+    <CorePackagePatch Condition="'$(CorePackagePatch)' == ''">86</CorePackagePatch>
     <UseCoreProject Condition="'$(UseCoreProject)' == ''">false</UseCoreProject>
   </PropertyGroup>
   <ItemGroup Condition="'$(UseCoreProject)' == 'true'">
     <ProjectReference Include="..\Bsa.Msa.RabbitMq.Core\Bsa.Msa.RabbitMq.Core.csproj" />
   </ItemGroup>
   <ItemGroup Condition="'$(UseCoreProject)' != 'true' And '$(TargetFramework)' == 'net6.0'">
-    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="6.0.$(CorePackagePatch)" />
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="[6.0.$(CorePackagePatch)]" />
   </ItemGroup>
   <ItemGroup Condition="'$(UseCoreProject)' != 'true' And '$(TargetFramework)' == 'net7.0'">
-    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="7.0.$(CorePackagePatch)" />
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="[7.0.$(CorePackagePatch)]" />
   </ItemGroup>
   <ItemGroup Condition="'$(UseCoreProject)' != 'true' And '$(TargetFramework)' == 'net8.0'">
-    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="8.0.$(CorePackagePatch)" />
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="[8.0.$(CorePackagePatch)]" />
   </ItemGroup>
   <ItemGroup Condition="'$(UseCoreProject)' != 'true' And '$(TargetFramework)' == 'net9.0'">
-    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="9.0.$(CorePackagePatch)" />
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="[9.0.$(CorePackagePatch)]" />
   </ItemGroup>
   <ItemGroup Condition="'$(UseCoreProject)' != 'true' And '$(TargetFramework)' == 'net10.0'">
-    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="10.0.$(CorePackagePatch)" />
+    <PackageReference Include="Bsa.Msa.RabbitMq.Core" Version="[10.0.$(CorePackagePatch)]" />
   </ItemGroup>
   <!-- Per platform: the newest package whose dependencies stay within the line of the platform
        (Autofac.Extensions.DependencyInjection 11.x needs Microsoft.Extensions 10.x, 9.x/10.x need 8.x) -->
