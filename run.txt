@@ -1,0 +1,2 @@
+dotnet build d:\Work\bsa.msa\Bsa.Msa.Autofac\Bsa.Msa.Autofac.csproj -c Release -f net6.0 -p:Version=6.0.86
+dotnet pack d:\Work\bsa.msa\Bsa.Msa.Autofac\Bsa.Msa.Autofac.csproj -c Release -p:TargetFrameworks=net10.0 -p:Version=10.0.86
