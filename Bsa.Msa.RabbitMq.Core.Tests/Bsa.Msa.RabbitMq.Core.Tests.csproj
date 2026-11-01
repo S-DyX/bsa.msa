@@ -1,7 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
+    <!-- A platform without an installed runtime runs on a newer one -->
+    <RollForward>Major</RollForward>
     <Platforms>AnyCPU;x64</Platforms>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>

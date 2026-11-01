@@ -13,8 +13,10 @@
 
 ## Платформа
 
-- Библиотеки — **.NET 10** (`net10.0`), версии пакетов `10.0.x`. Пример хоста — `net8.0`.
-- `Bsa.Msa.Autofac` и `Bsa.Msa.SC` ссылаются на ядро **как на NuGet-пакет** (`Bsa.Msa.RabbitMq.Core`), а не через `ProjectReference`. Изменения в ядре попадают в них только после публикации пакета и обновления версии.
+- Библиотеки (`Bsa.Msa.RabbitMq.Core`, `Bsa.Msa.Autofac`, `Bsa.Msa.SC`) и тесты собираются под **.NET 6, 7, 8, 9 и 10** (`TargetFrameworks`). Версия пакетов — `10.0.x`, один пакет на все платформы. Пример хоста — `net7.0`.
+- Код ядра должен компилироваться в C# 10 (язык по умолчанию для net6.0) и использовать только API .NET 6; новые API — под `#if NET7_0_OR_GREATER` и т. п.
+- В интеграциях версии `Microsoft.Extensions.Hosting` и `Autofac.Extensions.DependencyInjection` заданы по платформе (6.x для net6, …, 10.x для net10): пакеты 9.x/10.x не поддерживают net6/net7.
+- `Bsa.Msa.Autofac` и `Bsa.Msa.SC` по умолчанию ссылаются на ядро через `ProjectReference`; `dotnet pack` записывает это как зависимость от пакета той же версии. `-p:UseCorePackage=true` — сборка против опубликованного пакета (`CorePackageVersion`).
 - `AllowUnsafeBlocks` в ядре включён.
 - Меняя публичный API пакета — поднять `<Version>` и заполнить `<PackageReleaseNotes>` в `.csproj`.
 
@@ -24,7 +26,7 @@
 dotnet build Bsa.Msa.sln
 ```
 
-Тесты — `Bsa.Msa.RabbitMq.Core.Tests` (MSTest + Moq, `net10.0`), брокер не нужен: `SimpleBus` проверяется на замоканном `IModel` (`Fakes/ChannelHarness`):
+Тесты — `Bsa.Msa.RabbitMq.Core.Tests` (MSTest + Moq, все платформы; `RollForward=Major` — без установленной среды тесты платформы идут на более новой), брокер не нужен: `SimpleBus` проверяется на замоканном `IModel` (`Fakes/ChannelHarness`):
 
 ```
 dotnet test Bsa.Msa.RabbitMq.Core.Tests/Bsa.Msa.RabbitMq.Core.Tests.csproj

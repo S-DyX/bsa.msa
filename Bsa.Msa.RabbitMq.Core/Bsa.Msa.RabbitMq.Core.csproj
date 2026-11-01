@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net6.0;net7.0;net8.0;net9.0;net10.0</TargetFrameworks>
     <Platforms>AnyCPU;x64</Platforms>
     <Description>Micro service architecture using the rabbitmq message broker.</Description>
     <Copyright>Stanislav Batyrgareev</Copyright>
@@ -10,14 +10,15 @@
     <RepositoryUrl>https://github.com/S-DyX/bsa.msa</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
     <PackageTags>MSA Rabbit MQ RabbiMQ RMQ Queue Message Bsa</PackageTags>
-    <PackageReleaseNotes>6.0.84
+    <PackageReleaseNotes>10.0.84
+- Builds for .NET 6, 7, 8, 9 and 10.
 - Fixed: the consumer dispatcher slept 200 ms or more before every next batch of deliveries (ConsumerWorkService), throughput with prefetchCount 5 grew from ~25 to ~15 000 msg/s.
 - Handler workers (degreeOfParallelism &gt; 1) wake up on a signal instead of polling the queue with sleeps up to 1 s.
 - Send/Publish overloads with persistent: false send transient messages (delivery mode 1) that the broker does not write to disk.
 - RabbitMQ port: "port" in the rabbitMQ section or the connection string, and "host:port" per host; 5672 by default.
 - Handler setting internalQueueFormat: "journal" stores the local queue in append-only segment files instead of a file per message; "files" stays the default, old .q files are read in both modes.</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>6.0.84</Version>
+    <Version>10.0.84</Version>
     <AssemblyVersion></AssemblyVersion>
     <FileVersion></FileVersion>
     <Authors>Stanislav Batyrgareev</Authors>
