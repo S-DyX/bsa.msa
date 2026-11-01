@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 
@@ -24,6 +25,8 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 		/// <exception cref="InvalidOperationException"></exception>
 		public RabbitMqSettings()
 		{
+			// Set before loading: the section may override it with "port".
+			Port = DefaultPort;
 			try
 			{
 
@@ -33,9 +36,10 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 			{
 				throw new InvalidOperationException("section not found or has bad format in appsettings.json  \"rabbitMq\": {\r\n    \"host\": \"localhost\",\r\n    \"username\": \"guest\",\r\n    \"password\": \"guest\",\r\n    //\"virtualHost\": \"virtual\",\r\n    \"timeout\": 10\r\n  }");
 			}
-			Port = 5672;
 		}
 		private Random _rnd = new Random(2);
+
+		private const int DefaultPort = 5672;
 
 		private void LoadSettings(IConfigurationSection raw)
 		{
@@ -46,6 +50,8 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 			this.UserName = raw.GetSection("username")?.Value ?? "guest";
 			this.Password = raw.GetSection("password")?.Value ?? "guest";
 			this.VirtualHost = raw.GetSection("virtualHost")?.Value;
+			var port = raw.GetSection("port")?.Value;
+			if (!string.IsNullOrEmpty(port)) Port = int.Parse(port, CultureInfo.InvariantCulture);
 			Hosts = raw.GetSection("host").Value.Split(';').ToList();
 			_rnd = new Random(Hosts?.Count ?? 0);
 			////this.Host = raw.Attribute("host").Value;
@@ -58,7 +64,7 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 		/// <inheritdoc cref="IRabbitMqSettings" />
 		public RabbitMqSettings(string connectionString)
 		{
-			Port = 5672;
+			Port = DefaultPort;
 			Hosts = new List<string>();
 			var values = connectionString.Split(';');
 			foreach (var v in values)
@@ -77,6 +83,9 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 						break;
 					case "timeout":
 						Timeout = int.Parse(keyValue[1]);
+						break;
+					case "port":
+						Port = int.Parse(keyValue[1], CultureInfo.InvariantCulture);
 						break;
 					case "virtualHost":
 						if (!string.IsNullOrEmpty(keyValue[1]))
@@ -160,7 +169,15 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 		{
 			get
 			{
-				return string.Format("host={0};username={1};password={2};timeout={3};virtualHost={4}", Host, UserName, Password, this.Timeout, VirtualHost);
+				return string.Format(
+					CultureInfo.InvariantCulture,
+					"host={0};port={1};username={2};password={3};timeout={4};virtualHost={5}",
+					Host,
+					Port,
+					UserName,
+					Password,
+					Timeout,
+					VirtualHost);
 			}
 		}
 	}

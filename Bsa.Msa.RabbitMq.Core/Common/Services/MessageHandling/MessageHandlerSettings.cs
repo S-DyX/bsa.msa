@@ -62,6 +62,7 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 				Postfix = attValue;
 			Ttl = GetAttIntValue(raw, "ttl") ?? GetAttIntValue(raw, "Ttl");
 			TurnOffInternalQueue = GetAttBoolValue(raw, "turnOffInternalQueue", false);
+			InternalQueueFormat = ParseInternalQueueFormat(GetAttValue(raw, "internalQueueFormat"));
 
 			if (!string.IsNullOrWhiteSpace(SubscriptionEndpoint) && !string.IsNullOrEmpty(Postfix))
 			{
@@ -149,6 +150,25 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 		{
 			get;
 			protected set;
+		}
+
+		/// <inheritdoc/>
+		public InternalQueueFormat InternalQueueFormat
+		{
+			get;
+			protected set;
+		}
+
+		private static InternalQueueFormat ParseInternalQueueFormat(string value)
+		{
+			if (string.IsNullOrWhiteSpace(value)) return InternalQueueFormat.Files;
+			if (Enum.TryParse<InternalQueueFormat>(value.Trim(), true, out var format)
+				&& Enum.IsDefined(typeof(InternalQueueFormat), format))
+			{
+				return format;
+			}
+			throw new InvalidOperationException(
+				$"Unknown internalQueueFormat '{value}', expected 'files' or 'journal'");
 		}
 
 		/// <inheritdoc/>

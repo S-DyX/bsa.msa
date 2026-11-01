@@ -1,5 +1,6 @@
 ﻿using Bsa.Msa.Common;
 using Bsa.Msa.Common.Helpers;
+using Bsa.Msa.Common.Services.MessageHandling;
 using RabbitMQ.Client.Events;
 using System;
 using System.Collections.Concurrent;
@@ -22,6 +23,20 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 		private readonly object _lock = new object();
 		private readonly ConcurrentDictionary<string, InternalBusItem> _concurrent =
 			new ConcurrentDictionary<string, InternalBusItem>();
+
+		// One journal per subscription folder; Lazy guarantees a single recovery of the folder.
+		private readonly ConcurrentDictionary<string, Lazy<InternalBusJournal>> _journals =
+			new ConcurrentDictionary<string, Lazy<InternalBusJournal>>();
+
+		private readonly ConcurrentDictionary<string, string> _queueFolders =
+			new ConcurrentDictionary<string, string>();
+
+		private Timer _flushTimer;
+
+		// Not _lock: Load holds _lock while it waits for a journal that may be opening on another thread.
+		private readonly object _timerLock = new object();
+
+		private const int JournalFlushIntervalMilliseconds = 10;
 		private InternalBus(ISerializeService serializeService, ILocalLogger localLogger)
 		{
 			_serializeService = serializeService;
@@ -29,6 +44,8 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 			_folder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "InternalQueue");
 			if (!Directory.Exists(_folder))
 				Directory.CreateDirectory(_folder);
+			// Acknowledgements are flushed in batches, the last ones are flushed on exit.
+			AppDomain.CurrentDomain.ProcessExit += (sender, args) => FlushJournals(null);
 			Task.Factory.StartNew(Load);
 		}
 
@@ -94,6 +111,7 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 					}
 
 				});
+				LoadJournals();
 				var groups = _concurrent.GroupBy(x => x.Value.Queue);
 				foreach (var group in groups)
 				{
@@ -186,10 +204,19 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 		private readonly ConcurrentDictionary<string, DateTime> _folders = new ConcurrentDictionary<string, DateTime>();
 		public InternalBusItem Register(BasicDeliverEventArgs eventArgs, string queue, string messageAsString)
 		{
+			return Register(eventArgs, queue, messageAsString, InternalQueueFormat.Files);
+		}
+
+		public InternalBusItem Register(
+			BasicDeliverEventArgs eventArgs,
+			string queue,
+			string messageAsString,
+			InternalQueueFormat format)
+		{
 			var properties = eventArgs.BasicProperties;
 			var headers = properties.Headers ?? new Dictionary<string, object>();
 			var deliveryTag = eventArgs.DeliveryTag;
-			var subFolder = Path.Combine(_folder, queue.ComputeMd5String());
+			var subFolder = GetQueueFolder(queue);
 			var temp = DateTime.UtcNow;
 			if (_folders.TryGetValue(subFolder, out temp))
 			{
@@ -216,6 +243,13 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 				Queue = queue,
 				Body = messageAsString
 			};
+			if (format == InternalQueueFormat.Journal)
+			{
+				obj.FileName = null;
+				AppendToJournal(subFolder, obj);
+				return obj;
+			}
+
 			var str = _serializeService.Serialize(obj);
 
 			File.WriteAllText(fileName, Convert.ToBase64String(Encoding.UTF8.GetBytes(str)));
@@ -223,16 +257,114 @@ namespace Bsa.Msa.RabbitMq.Core.Common
 			return obj;
 		}
 
+		private void AppendToJournal(string folder, InternalBusItem item)
+		{
+			// Added first: compaction of the journal resolves live messages from the dictionary.
+			_concurrent.TryAdd(item.Id, item);
+			var journal = GetJournal(folder);
+			try
+			{
+				lock (journal)
+				{
+					journal.Append(item);
+				}
+			}
+			catch
+			{
+				_concurrent.TryRemove(item.Id, out _);
+				throw;
+			}
+		}
+
+		private string GetQueueFolder(string queue)
+		{
+			return _queueFolders.GetOrAdd(queue, x => Path.Combine(_folder, x.ComputeMd5String()));
+		}
+
+		private InternalBusJournal GetJournal(string folder)
+		{
+			return _journals.GetOrAdd(folder, x => new Lazy<InternalBusJournal>(() => OpenJournal(x))).Value;
+		}
+
+		private InternalBusJournal OpenJournal(string folder)
+		{
+			var journal = new InternalBusJournal(
+				folder,
+				_serializeService,
+				_localLogger,
+				id => _concurrent.TryGetValue(id, out var item) ? item : null);
+			lock (journal)
+			{
+				foreach (var item in journal.Recover())
+				{
+					item.FileName = null;
+					item.Headers = NormalizeHeaders(item.Headers);
+					_concurrent.TryAdd(item.Id, item);
+				}
+			}
+			lock (_timerLock)
+			{
+				_flushTimer ??= new Timer(
+					FlushJournals,
+					null,
+					JournalFlushIntervalMilliseconds,
+					JournalFlushIntervalMilliseconds);
+			}
+			return journal;
+		}
+
+		private void FlushJournals(object state)
+		{
+			foreach (var lazy in _journals.Values)
+			{
+				if (!lazy.IsValueCreated) continue;
+				var journal = lazy.Value;
+				try
+				{
+					lock (journal)
+					{
+						journal.Flush();
+					}
+				}
+				catch (Exception e)
+				{
+					_localLogger?.Error($"Can not flush the internal queue journal: {e.Message}", e);
+				}
+			}
+		}
+
+		private void LoadJournals()
+		{
+			foreach (var folder in Directory.GetDirectories(_folder))
+			{
+				try
+				{
+					if (Directory.EnumerateFiles(folder, "*.qj").Any()) GetJournal(folder);
+				}
+				catch (Exception e)
+				{
+					_localLogger?.Error($"{folder};{e.Message}", e);
+				}
+			}
+		}
+
 		public void Ack(string id)
 		{
 			InternalBusItem val = null;
 			if (_concurrent.TryRemove(id, out val))
 			{
-				if (val != null && File.Exists(val.FileName))
+				if (val == null) return;
+				// A message of the old format has its own file, a journal message has none.
+				if (val.FileName != null)
 				{
-					File.Delete(val.FileName);
+					if (File.Exists(val.FileName)) File.Delete(val.FileName);
+					return;
 				}
-
+				var journal = GetJournal(GetQueueFolder(val.Queue));
+				lock (journal)
+				{
+					journal.Ack(id);
+				}
 			}
 		}
 	}

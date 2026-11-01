@@ -10,13 +10,14 @@
     <RepositoryUrl>https://github.com/S-DyX/bsa.msa</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
     <PackageTags>MSA Rabbit MQ RabbiMQ RMQ Queue Message Bsa</PackageTags>
-    <PackageReleaseNotes>{ "name": "Nightly",  "type": "ReindexCommand", "schedule": "daily",   "at": "23:59" }
-{ "name": "Report",   "type": "ReportCommand",  "schedule": "weekly",  "days": "Monday;Thursday", "at": "02:00;14:00" }
-{ "name": "Billing",  "type": "BillingCommand", "schedule": "monthly", "daysOfMonth": "1;15;-1", "at": "23:59" }
-{ "name": "NightSync","type": "SyncCommand",    "period": "00:10:00", "from": "23:59", "to": "06:00", "days": "WorkingDays" }
-{ "name": "Legacy",   "type": "ExampleCommand", "period": "00:05:00", "start": "14:00:00" }</PackageReleaseNotes>
+    <PackageReleaseNotes>6.0.84
+- Fixed: the consumer dispatcher slept 200 ms or more before every next batch of deliveries (ConsumerWorkService), throughput with prefetchCount 5 grew from ~25 to ~15 000 msg/s.
+- Handler workers (degreeOfParallelism &gt; 1) wake up on a signal instead of polling the queue with sleeps up to 1 s.
+- Send/Publish overloads with persistent: false send transient messages (delivery mode 1) that the broker does not write to disk.
+- RabbitMQ port: "port" in the rabbitMQ section or the connection string, and "host:port" per host; 5672 by default.
+- Handler setting internalQueueFormat: "journal" stores the local queue in append-only segment files instead of a file per message; "files" stays the default, old .q files are read in both modes.</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
-    <Version>6.0.83</Version>
+    <Version>6.0.84</Version>
     <AssemblyVersion></AssemblyVersion>
     <FileVersion></FileVersion>
     <Authors>Stanislav Batyrgareev</Authors>

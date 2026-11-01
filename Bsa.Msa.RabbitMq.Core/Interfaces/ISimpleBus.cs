@@ -62,6 +62,23 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		void Send<TMessage>(string queue, TMessage message, int? ttl = null) where TMessage : class;
 
 		/// <summary>
+		/// Sends a message to the queue, persistent or transient.
+		/// </summary>
+		/// <typeparam name="TMessage">Message type.</typeparam>
+		/// <param name="queue">Queue name.</param>
+		/// <param name="message">Message.</param>
+		/// <param name="ttl">Message TTL in milliseconds; <c>null</c> means no TTL.</param>
+		/// <param name="persistent">
+		/// <c>true</c> — the broker writes the message to disk (delivery mode 2);
+		/// <c>false</c> — the message is kept in memory only and is lost on a broker restart,
+		/// which is much faster for data that can be lost.
+		/// </param>
+		void Send<TMessage>(string queue, TMessage message, int? ttl, bool persistent) where TMessage : class
+		{
+			Send(queue, message, ttl);
+		}
+
+		/// <summary>
 		/// Publish to exchange
 		/// </summary>
 		/// <typeparam name="TMessage"></typeparam>
@@ -88,6 +105,21 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		void Publish<TMessage>(TMessage message, string topic, string exchangeName, int? ttl) where TMessage : class
 		{
 			Publish(message, topic, exchangeName);
+		}
+
+		/// <summary>
+		/// Publishes a message, persistent or transient.
+		/// </summary>
+		/// <typeparam name="TMessage">Message type.</typeparam>
+		/// <param name="message">Message.</param>
+		/// <param name="topic">Routing key; empty for a fanout exchange.</param>
+		/// <param name="exchangeName">Exchange; <c>null</c> means the exchange of the type.</param>
+		/// <param name="ttl">Message TTL in milliseconds; <c>null</c> means no TTL.</param>
+		/// <param name="persistent"><c>false</c> — the message is not written to disk by the broker.</param>
+		void Publish<TMessage>(TMessage message, string topic, string exchangeName, int? ttl, bool persistent)
+			where TMessage : class
+		{
+			Publish(message, topic, exchangeName, ttl);
 		}
 
 		/// <summary>

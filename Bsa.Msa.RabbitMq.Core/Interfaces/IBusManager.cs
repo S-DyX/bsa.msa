@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Bsa.Msa.RabbitMq.Core.Interfaces
@@ -100,6 +100,39 @@ namespace Bsa.Msa.RabbitMq.Core.Interfaces
 		/// </example>
 		/// </remarks>
 		void Send<TMessage>(string queue, TMessage message, int? ttl = null, bool forceSend = false) where TMessage : class;
+
+		/// <summary>
+		/// Sends a message to the queue, persistent or transient.
+		/// </summary>
+		/// <typeparam name="TMessage">Message type.</typeparam>
+		/// <param name="queue">Queue name; empty means the exchange of the type.</param>
+		/// <param name="message">Message.</param>
+		/// <param name="ttl">Message TTL in milliseconds; <c>null</c> means no TTL.</param>
+		/// <param name="forceSend"><c>true</c> — skip the local bus and always go through the broker.</param>
+		/// <param name="persistent">
+		/// <c>false</c> — the broker keeps the message in memory only: it is lost on a broker restart,
+		/// but sending is much faster. A message handled by the local bus is not affected.
+		/// </param>
+		void Send<TMessage>(string queue, TMessage message, int? ttl, bool forceSend, bool persistent)
+			where TMessage : class
+		{
+			Send(queue, message, ttl, forceSend);
+		}
+
+		/// <summary>
+		/// Publishes a message, persistent or transient.
+		/// </summary>
+		/// <typeparam name="TMessage">Message type.</typeparam>
+		/// <param name="message">Message.</param>
+		/// <param name="topic">Routing key; empty for a fanout exchange.</param>
+		/// <param name="exchangeName">Exchange; <c>null</c> means the exchange of the type.</param>
+		/// <param name="ttl">Message TTL in milliseconds; <c>null</c> means no TTL.</param>
+		/// <param name="persistent"><c>false</c> — the message is not written to disk by the broker.</param>
+		void Publish<TMessage>(TMessage message, string topic, string exchangeName, int? ttl, bool persistent)
+			where TMessage : class
+		{
+			Publish(message, topic, exchangeName);
+		}
 
 		/// <summary>
 		/// Publishes a message to the default exchange configured for the message type.

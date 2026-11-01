@@ -296,6 +296,17 @@ namespace Bsa.Msa.Common.Services.MessageHandling
 		bool TurnOffInternalQueue { get; }
 
 		/// <summary>
+		/// Gets how the local queue stores messages before they are handled
+		/// ("internalQueueFormat": "files" or "journal"; "files" by default).
+		/// </summary>
+		/// <remarks>
+		/// "journal" writes a message as one record in a segment file instead of creating and deleting
+		/// a file per message, which is many times faster with degreeOfParallelism &gt; 1.
+		/// Messages left in the old format are read and handled in both modes.
+		/// </remarks>
+		InternalQueueFormat InternalQueueFormat => InternalQueueFormat.Files;
+
+		/// <summary>
 		/// Unique uid
 		/// </summary>
 		string Uid { get; internal set; }

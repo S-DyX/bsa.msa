@@ -213,5 +213,34 @@ namespace Bsa.Msa.RabbitMq.Core.Tests.Messaging
 			var handlerSettings = new MessageHandlerSettings(ConfigurationFactory.CreateSection(values));
 			_bus.Subscribe(_queue, action, handlerSettings);
 		}
+
+		[TestMethod]
+		public void Send_ByDefault_IsPersistent()
+		{
+			_bus.Send(_queue, new TestMessage { Id = 1 });
+
+			Assert.AreEqual((byte)2, _harness.Published.Single().Properties.DeliveryMode);
+		}
+
+		[TestMethod]
+		public void Send_Transient_UsesDeliveryModeOne()
+		{
+			_bus.Send(_queue, new TestMessage { Id = 1 }, 500, false);
+
+			var published = _harness.Published.Single();
+			Assert.AreEqual(_queue, published.RoutingKey);
+			Assert.AreEqual((byte)1, published.Properties.DeliveryMode);
+			Assert.AreEqual("500", published.Properties.Expiration);
+		}
+
+		[TestMethod]
+		public void Publish_Transient_UsesDeliveryModeOne()
+		{
+			_bus.Publish(new TestMessage { Id = 1 }, "key", "exchange", null, false);
+
+			var published = _harness.Published.Single();
+			Assert.AreEqual("exchange", published.Exchange);
+			Assert.AreEqual((byte)1, published.Properties.DeliveryMode);
+		}
 	}
 }

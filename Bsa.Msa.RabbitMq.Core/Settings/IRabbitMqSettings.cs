@@ -32,5 +32,10 @@ namespace Bsa.Msa.RabbitMq.Core.Settings
 		/// If not specified, the default virtual host ("/") is typically used.
 		/// </summary>
 		string VirtualHost { get; }
+
+		/// <summary>
+		/// Gets the broker port used when a host does not specify its own ("host:port").
+		/// </summary>
+		int Port => 5672;
 	}
 }

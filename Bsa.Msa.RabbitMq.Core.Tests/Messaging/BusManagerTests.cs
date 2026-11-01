@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Bsa.Msa.RabbitMq.Core.Interfaces;
 using Bsa.Msa.RabbitMq.Core.Tests.Fakes;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -90,6 +91,30 @@ namespace Bsa.Msa.RabbitMq.Core.Tests.Messaging
 
 			_simpleBus.Verify(x => x.Dispose(), Times.Once);
 			_simpleBus.Verify(x => x.Reconnect(It.IsAny<string>()), Times.Never);
+		}
+
+		[TestMethod]
+		public void Send_Transient_ReachesBrokerAsTransient()
+		{
+			var harness = new ChannelHarness();
+			var manager = new BusManager(new SimpleBus(harness.Connection.Object, null, null, null));
+
+			manager.Send(Queue, _message, null, false, false);
+
+			var published = harness.Published.Single();
+			Assert.AreEqual(Queue, published.RoutingKey);
+			Assert.AreEqual((byte)1, published.Properties.DeliveryMode);
+		}
+
+		[TestMethod]
+		public void Send_WithoutQueueTransient_PublishesTransient()
+		{
+			var harness = new ChannelHarness();
+			var manager = new BusManager(new SimpleBus(harness.Connection.Object, null, null, null));
+
+			manager.Send(string.Empty, _message, null, false, false);
+
+			Assert.AreEqual((byte)1, harness.Published.Single().Properties.DeliveryMode);
 		}
 	}
 }

@@ -5,6 +5,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 
@@ -93,11 +94,12 @@ namespace Bsa.Msa.RabbitMq.Core
 		{
 			get
 			{
-				var hostName = _settings.Host;
+				var (hostName, port) = SplitHost(_settings.Host, _settings.Port);
 
 				var connectionFactory = _connectionFactory ??= new ConnectionFactory()
 				{
 					HostName = hostName,
+					Port = port,
 					Password = _settings.Password,
 					UserName = _settings.UserName,
 					AutomaticRecoveryEnabled = true,
@@ -474,6 +476,38 @@ namespace Bsa.Msa.RabbitMq.Core
 		public bool IsConnected =>
 			_model != null && _model.IsOpen
 			&& _connection != null && _connection.IsOpen;
+
+		/// <summary>
+		/// Splits "host:port" or "[ipv6]:port"; a host without a port uses <paramref name="defaultPort"/>.
+		/// </summary>
+		internal static (string Host, int Port) SplitHost(string host, int defaultPort)
+		{
+			if (string.IsNullOrEmpty(host)) return (host, defaultPort);
+			if (host.StartsWith("[", StringComparison.Ordinal))
+			{
+				var end = host.IndexOf(']');
+				if (end < 0) return (host, defaultPort);
+				var address = host.Substring(1, end - 1);
+				return end + 1 < host.Length && host[end + 1] == ':'
+					? (address, ParsePort(host.Substring(end + 2), host))
+					: (address, defaultPort);
+			}
+			var colon = host.IndexOf(':');
+			// More than one colon is a bare IPv6 address without a port.
+			if (colon < 0 || colon != host.LastIndexOf(':')) return (host, defaultPort);
+			return (host.Substring(0, colon), ParsePort(host.Substring(colon + 1), host));
+		}
+
+		private static int ParsePort(string value, string host)
+		{
+			if (int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var port)
+				&& port > 0
+				&& port <= 65535)
+			{
+				return port;
+			}
+			throw new FormatException($"Invalid port in RabbitMQ host '{host}'");
+		}
 
 		/// <inheritdoc />
 		public void Dispose()

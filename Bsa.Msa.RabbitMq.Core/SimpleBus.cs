@@ -522,7 +522,11 @@ namespace Bsa.Msa.RabbitMq.Core
 			try
 			{
 				var message = _serializeService.Deserialize<TMessage>(messageAsString);
-				var item = _internalBus.Register(e, queueName, messageAsString);
+				var item = _internalBus.Register(
+					e,
+					queueName,
+					messageAsString,
+					_messageHandlerSettings.InternalQueueFormat);
 				if (!TryAck(model, deliveryModel, e.DeliveryTag))
 				{
 					// The broker will redeliver the message, drop the local copy.
@@ -569,11 +573,14 @@ namespace Bsa.Msa.RabbitMq.Core
 			var workers = GetWorkers();
 			var tasksCount = workers.Length;
 			var freeList = workers.Where(x => x.CanFree).ToList();
-			var times = tasksCount << 3;
+			// A new worker as soon as the queue is longer than the number of workers:
+			// waiting for eight messages per worker kept most of degreeOfParallelism unused.
 			if (freeList.Count == 0
-				&& times < _queue.Count
+				&& tasksCount < _queue.Count
 				&& tasksCount < _messageHandlerSettings.DegreeOfParallelism)
+			{
 				AddAWorker();
+			}
 
 			if (tasksCount <= 1 || tasksCount <= _queue.Count)
 				return;
@@ -893,6 +900,9 @@ namespace Bsa.Msa.RabbitMq.Core
 			_simpleConnection.Dispose();
 		}
 
+		// AMQP delivery mode: 2 — persistent (written to disk), 1 — transient.
+		private static byte DeliveryMode(bool persistent) => persistent ? (byte)2 : (byte)1;
+
 		private static string GetQueueKey(string queue) => $"queue:{queue}";
 
 		private static string GetExchangeKey(string exchange) => $"exchange:{exchange}";
@@ -960,6 +970,12 @@ namespace Bsa.Msa.RabbitMq.Core
 		/// <inheritdoc />
 		public void Send<TMessage>(string queue, TMessage message, int? ttl = null) where TMessage : class
 		{
+			Send(queue, message, ttl, true);
+		}
+
+		/// <inheritdoc />
+		public void Send<TMessage>(string queue, TMessage message, int? ttl, bool persistent) where TMessage : class
+		{
 			_simpleConnection.Configure(GetQueueKey(queue), getChannel =>
 			{
 				try
@@ -977,7 +993,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			_simpleConnection.Execute(getChannel =>
 			{
 				var props = getChannel().CreateBasicProperties();
-				props.DeliveryMode = 2;
+				props.DeliveryMode = DeliveryMode(persistent);
 
 				// Per-message TTL: the queue is not deleted and redeclared any more.
 				if (ttl.HasValue)
@@ -1004,6 +1020,13 @@ namespace Bsa.Msa.RabbitMq.Core
 		/// <inheritdoc />
 		public void Publish<TMessage>(TMessage message, string routingKey, string exchangeName, int? ttl) where TMessage : class
 		{
+			Publish(message, routingKey, exchangeName, ttl, true);
+		}
+
+		/// <inheritdoc />
+		public void Publish<TMessage>(TMessage message, string routingKey, string exchangeName, int? ttl, bool persistent)
+			where TMessage : class
+		{
 			var type = fanout;
 			if (!string.IsNullOrEmpty(routingKey))
 				type = topic;
@@ -1019,7 +1042,7 @@ namespace Bsa.Msa.RabbitMq.Core
 			_simpleConnection.Execute(getChannel =>
 			{
 				var props = getChannel().CreateBasicProperties();
-				props.DeliveryMode = 2;
+				props.DeliveryMode = DeliveryMode(persistent);
 				if (ttl.HasValue)
 					props.Expiration = ttl.Value.ToString(CultureInfo.InvariantCulture);
 				getChannel().BasicPublish(exchangeName, routingKey ?? String.Empty, props, body);

@@ -51,11 +51,19 @@ namespace Bsa.Msa.RabbitMq.Core
 		/// <inheritdoc />
 		public void Send<TMessage>(string queue, TMessage message, int? ttl = null, bool forceSend = false) where TMessage : class
 		{
+			Send(queue, message, ttl, forceSend, true);
+		}
+
+		/// <inheritdoc />
+		public void Send<TMessage>(string queue, TMessage message, int? ttl, bool forceSend, bool persistent)
+			where TMessage : class
+		{
 			// Without a queue the message goes to the exchange of the type,
 			// so every subscribed queue (useExchange) receives it.
 			if (string.IsNullOrEmpty(queue))
 			{
-				Bus.Publish(message, string.Empty, null, ttl);
+				if (persistent) Bus.Publish(message, string.Empty, null, ttl);
+				else Bus.Publish(message, string.Empty, null, ttl, false);
 				return;
 			}
 
@@ -63,7 +71,9 @@ namespace Bsa.Msa.RabbitMq.Core
 				return;
 
 			// Broker errors are not retried here: a blind retry duplicated messages.
-			Bus.Send(queue, message, ttl);
+			// The persistent call keeps the original overload for other ISimpleBus implementations.
+			if (persistent) Bus.Send(queue, message, ttl);
+			else Bus.Send(queue, message, ttl, false);
 		}
 
 		private bool TryHandleLocally<TMessage>(string queue, TMessage message)
@@ -111,6 +121,14 @@ namespace Bsa.Msa.RabbitMq.Core
 		public void Publish<TMessage>(TMessage message, string topic, string exchangeName = null) where TMessage : class
 		{
 			Bus.Publish<TMessage>(message, topic, exchangeName);
+		}
+
+		/// <inheritdoc />
+		public void Publish<TMessage>(TMessage message, string topic, string exchangeName, int? ttl, bool persistent)
+			where TMessage : class
+		{
+			if (persistent && ttl == null) Bus.Publish(message, topic, exchangeName);
+			else Bus.Publish(message, topic, exchangeName, ttl, persistent);
 		}
 
 		/// <inheritdoc />

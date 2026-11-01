@@ -81,8 +81,10 @@ dotnet test Bsa.Msa.RabbitMq.Core.Tests/Bsa.Msa.RabbitMq.Core.Tests.csproj
 { "name": "Night sync", "type": "SyncCommand", "period": "00:10:00", "from": "23:59", "to": "06:00", "days": "WorkingDays" }
 { "name": "Legacy", "type": "ExampleCommand", "period": "00:05:00", "start": "14:00:00" }
 ```
-- **Сервисы.** `ServiceUnitManager` (`IServiceUnitManager`) читает `services.json` (`IServicesSettings`): список сервисов, у каждого — `commands` и `handlers` (`subscriptionEndpoint`, `degreeOfParallelism`, `useExchange`, `retry`, `retryCount` — число повторов, `retryDelay` — пауза перед повтором в мс через очередь `<queue>.Retry`, `ttl`, `clearAfterStart`). Запуск и остановка — `ServiceHost` (`IHostedService`) в проектах интеграции.
-- **Настройки.** `SettingsBase` и `RabbitMqSettings` (секция `rabbitMq` в `appsettings.json`; несколько хостов через `;`).
+- **Сервисы.** `ServiceUnitManager` (`IServiceUnitManager`) читает `services.json` (`IServicesSettings`): список сервисов, у каждого — `commands` и `handlers` (`subscriptionEndpoint`, `degreeOfParallelism`, `useExchange`, `retry`, `retryCount` — число повторов, `retryDelay` — пауза перед повтором в мс через очередь `<queue>.Retry`, `ttl`, `clearAfterStart`, `internalQueueFormat`).
+- **Локальная очередь (`InternalBus`).** При `degreeOfParallelism > 1` сообщение сначала сохраняется в `InternalQueue/<md5 очереди>/`, подтверждается брокеру и затем обрабатывается. `internalQueueFormat: files` (по умолчанию) — файл `<id>.q` на сообщение; `journal` — журнал `InternalBusJournal`: сегменты `*.qj` по 16 МБ, запись `[тип][длина][FNV-1a][JSON]`, подтверждение обработки — отдельная запись, сегменты удаляются с самого старого, «зависшие» сообщения старого сегмента переписываются в текущий. Файлы `.q` читаются в обоих режимах (обновление и откат без потерь). Запуск и остановка — `ServiceHost` (`IHostedService`) в проектах интеграции.
+- **Настройки.** `SettingsBase` и `RabbitMqSettings` (секция `rabbitMq` в `appsettings.json`; несколько хостов через `;`; порт — `port` или `host:port` у хоста, по умолчанию 5672).
+- **Persistent / transient.** `Send`/`Publish` по умолчанию отправляют persistent-сообщения (delivery mode 2); перегрузки с `persistent: false` — transient (брокер не пишет на диск).
 - Пространства имён ядра: `Bsa.Msa.RabbitMq.Core.*` и `Bsa.Msa.Common.*` (общие сервисы, обработчики, команды).
 
 ## Оформление кода
